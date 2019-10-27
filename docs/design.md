@@ -126,6 +126,8 @@ at the classes it defines.
     specific parameters, and load the parsed command line arguments to
     give parameter values at the end.  There are many subclasses of
     ArgLoaders, each for handling a different type of parameters.
+    There is also a CompositeArgLoader defined so that you can easily
+    use multiple ArgLoader for one parameter.
 
   * VarArgBroker: Determine how variable arguments are to be
     distributed among the Namespace produced by the underlying

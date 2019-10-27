@@ -21,12 +21,13 @@ import typing
 
 class ParamInfo:
     "Parameter information extracted from doc-strings"
-    def __init__(self, desc) -> None:
+    def __init__(self, desc: str, short: str = '',
+                 choices: typing.Optional[typing.List[str]] = None) -> None:
         self.desc = desc
         "The description of the parameter"
-        self.short = ''
+        self.short = short
         "The short option string, like '-i'"
-        self.choices = None  # type: typing.Optional[typing.List[str]]
+        self.choices = choices  # type: typing.Optional[typing.List[str]]
         "The possible choices"
 
 
@@ -475,6 +476,30 @@ class MapArgLoader(BaseArgLoader):
         for pval in getattr(namespace, self._param):
             key, _, mval = pval.partition('=')
             kwd[key] = self._ptype(mval)
+
+
+class CompositeArgLoader(BaseArgLoader):
+    def __init__(self, param: str, ptype: type,
+                 info: typing.Optional[ParamInfo],
+                 default: typing.Any,
+                 ctor: FuncType,
+                 subloaders: typing.List[BaseArgLoader]) -> None:
+        super().__init__(param, ptype, info, default)
+        self._ctor = ctor
+        self._subloaders = subloaders
+
+    def prepare(self, calf_info: 'CalfInfo') -> None:
+        for loader in self._subloaders:
+            loader.prepare(calf_info)
+
+    def load(self, namespace: argparse.Namespace,
+             pos: typing.List[typing.Any],
+             kwd: typing.Dict[str, typing.Any]) -> None:
+        vararg = []  # type: typing.List[typing.Any]
+        varkw = {}  # type: typing.Dict[str, typing.Any]
+        for loader in self._subloaders:
+            loader.load(namespace, vararg, varkw)
+        pos.append(self._ctor(*vararg, **varkw))
 
 
 VarIdentType = typing.Union[str, typing.Pattern[str]]
