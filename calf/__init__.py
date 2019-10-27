@@ -139,7 +139,7 @@ class CalfRunner:
         self._param_parser = param_parser
 
     def __call__(self, func: FuncType,
-                 args: typing.Optional[typing.Iterable[str]] = None) \
+                 args: typing.Optional[typing.Sequence[str]] = None) \
             -> typing.Any:
         """Convert func to a parser, collect arguments and call func
 
@@ -154,7 +154,8 @@ class CalfRunner:
 
         """
         calf_info = self.get_calf(func)
-        namespace = self.parse_args(calf_info, args or sys.argv)
+        namespace = self.parse_args(
+            calf_info, sys.argv if args is None else args)
         pos, kwd = self.ns2params(calf_info, namespace)
         return func(*pos, **kwd)
 
@@ -234,7 +235,7 @@ class CalfRunner:
                 calf_info.arg_loaders[param].prepare(calf_info)
                 return
 
-    def parse_args(self, calf_info: 'CalfInfo', args: typing.Iterable[str]) \
+    def parse_args(self, calf_info: 'CalfInfo', args: typing.Sequence[str]) \
             -> argparse.Namespace:
         """Parse command line arguments
 
@@ -250,9 +251,9 @@ class CalfRunner:
         """
         assert calf_info.parser
         if calf_info.var_arg_broker.want_var_arg():
-            namespace, others = calf_info.parser.parse_known_args()
+            namespace, others = calf_info.parser.parse_known_args(args)
         else:
-            namespace, others = calf_info.parser.parse_args(), []
+            namespace, others = calf_info.parser.parse_args(args), []
         calf_info.var_arg_broker.distribute(namespace, others)
         return namespace
 
@@ -577,7 +578,8 @@ class CalfInfo:
         self.namespace = None  # type: typing.Optional[argparse.Namespace]
 
 
-def call(func: typing.Callable[..., typing.Any]) -> None:
+def call(func: typing.Callable[..., typing.Any],
+         args: typing.Optional[typing.Sequence[str]] = None) -> typing.Any:
     "Call function using Google apidoc style with basic parameter recognition"
-    CalfRunner([], doc_parser=google_apidoc_parser,
-               param_parser=basic_param_parser)(func)
+    return CalfRunner([], doc_parser=google_apidoc_parser,
+                      param_parser=basic_param_parser)(func, args)
