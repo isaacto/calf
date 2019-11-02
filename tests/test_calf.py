@@ -77,7 +77,7 @@ def test_help(capsys):
     except SystemExit:
         pass
     captured = capsys.readouterr()
-    assert 'usage: Test function' in captured.out
+    assert '\nTest function\n' in captured.out
 
 
 def test_simple():

@@ -155,7 +155,7 @@ class CalfRunner:
         """
         calf_info = self.get_calf(func)
         namespace = self.parse_args(
-            calf_info, sys.argv if args is None else args)
+            calf_info, sys.argv[1:] if args is None else args)
         pos, kwd = self.ns2params(calf_info, namespace)
         return func(*pos, **kwd)
 
@@ -208,7 +208,7 @@ class CalfRunner:
 
         """
         calf_info.parser = argparse.ArgumentParser(
-            usage=calf_info.usage,
+            description=calf_info.usage,
             formatter_class=argparse.RawDescriptionHelpFormatter)
 
     def add_param(self, calf_info: 'CalfInfo', param: str,
