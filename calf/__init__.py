@@ -15,7 +15,6 @@ import inspect
 import itertools
 import re
 import sys
-import textwrap
 import typing
 
 
@@ -47,10 +46,7 @@ def plain_apidoc_parser(apidoc: str) -> DocParserRetType:
         The parsed doc string and empty parameter list
 
     """
-    head, sep, tail = apidoc.partition('\n')
-    return '%s%s%s' % (
-        head.strip(), sep, textwrap.dedent(tail).rstrip()
-    ), {}
+    return inspect.cleandoc(apidoc), {}
 
 
 def google_apidoc_parser(apidoc: str) -> DocParserRetType:
