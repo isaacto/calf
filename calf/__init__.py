@@ -69,33 +69,47 @@ def google_apidoc_parser(apidoc: str) -> DocParserRetType:
     if len(parts) <= 1:
         return main_doc, param_docs
     main_doc = parts[0]
-    remain = ''.join(parts[1:])
+    remain = ''.join(parts[1:])  # Combine the separator and the text
     # Skip before Args section
     parts = re.split(r'^Args?:\s*$', remain, 1, re.M)
     if len(parts) <= 1:
         return main_doc, param_docs
-    remain = parts[1]
-    remain_lines = [l.expandtabs() for l in parts[1].split('\n')
-                    if l.strip()]
-    if not remain_lines:
-        return main_doc, param_docs
-    # Get lines of Args section
-    match = re.search('^ *', remain_lines[0])
-    assert match
-    ilen = len(match.group(0))
-    remain_lines = list(itertools.takewhile(lambda x: x[:ilen] == ' ' * ilen,
-                                            remain_lines))
-    # Find lines containing start of options
-    is_start = [0 if l[ilen] == ' ' else 1 for l in remain_lines]
-    opt_cnt = list(itertools.accumulate(is_start))
-    for _, opt_iter in itertools.groupby(zip(remain_lines, opt_cnt),
-                                         lambda x: x[1]):
+    for group in indented_groups(parts[1]):
         # Split name from description of option
-        arg = ' '.join(l for l, _ in opt_iter if l)
+        arg = ' '.join(group)
         name, _sep, desc = arg.partition(':')
         name = re.split(r'[\ \(]', name.strip())[0]
         param_docs[name] = ParamInfo(desc=desc.strip())
     return main_doc, param_docs
+
+
+def indented_groups(inp: str) -> typing.Iterator[typing.List[str]]:
+    """Split text according to indentation
+
+    Args:
+
+        inp: The input text.  Lines after the first one dedenting over
+            the first line are ignored, as well as lines containing
+            only whitespaces.
+
+    Yields:
+
+        List of lines of each group.  The first of each of them should
+            be indented less than all the remainder.
+
+    """
+    lines = [l.expandtabs() for l in inp.split('\n') if l.strip()]
+    if not lines:
+        return
+    match = re.search('^ *', lines[0])
+    assert match
+    ilen = len(match.group(0))
+    lines = list(itertools.takewhile(lambda x: x[:ilen] == ' ' * ilen, lines))
+    is_start = [0 if l[ilen] == ' ' else 1 for l in lines]
+    group_cnt = list(itertools.accumulate(is_start))
+    for _, group_iter in itertools.groupby(zip(lines, group_cnt),
+                                           lambda x: x[1]):
+        yield list(x for x, _ in group_iter)
 
 
 ParamParserType = typing.Callable[[ParamInfo], None]
