@@ -484,10 +484,10 @@ class MapArgLoader(BaseArgLoader):
     "Define how to handle a map-like remaining option"
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
-        extra = {}  # type: typing.Dict[str, typing.Any]
+        extra = {'nargs': '*',
+                 'metavar': 'key=val'}
         if self._info:
             extra['help'] = self._info.desc
-        extra['nargs'] = '*'
         calf_info.var_arg_broker.register_var(
             re.compile(r'^[^=].*='), self._param)
         assert calf_info.parser
