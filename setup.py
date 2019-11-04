@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='calf',
-    version='0.1',
+    version='0.1.5',
     author='Isaac To',
     author_email='isaac.to@gmail.com',
     description='Command Argument Loading Functions',
@@ -13,6 +13,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/isaacto/calf',
     packages=setuptools.find_packages(),
+    package_data={'calf': ['docs/*']},
     classifiers=[
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3.5',
