@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/isaacto/calf',
     packages=setuptools.find_packages(),
-    package_data={'calf': ['docs/*']},
+    package_data={'calf': ['py.typed']},
     classifiers=[
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3.5',
