@@ -150,10 +150,10 @@ converter class then does the following:
 
   * A CalfInfo object is created.
 
-  * The `apidoc_parser` function is called, to parse the doc-string of
+  * The `doc_parser` function is called, to parse the doc-string of
     the target function to a parsed docstring and a list of ParamInfo
     objects.  The simple parser does basic space stripping, while the
-    `google_apidoc_parser` would keep only the leading sections and
+    `google_doc_parser` would keep only the leading sections and
     parse the "Args" section to ParamInfo.
     
   * The ParamInfo's are parsed using a `param_parser` function,
@@ -186,9 +186,9 @@ converter class then does the following:
   * The target function with the positional and keyword parameter list
     obtained above.
 
-## `google_apidoc_parser`
+## `google_doc_parser`
 
-The `google_api_parser` provides a little more data than a regular
+The `google_doc_parser` provides a little more data than a regular
 Google-style docstring:
 
   * An optional "short option string" created by the leading

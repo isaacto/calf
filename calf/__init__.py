@@ -34,34 +34,34 @@ DocParserRetType = typing.Tuple[str, typing.Dict[str, ParamInfo]]
 DocParserType = typing.Callable[[str], DocParserRetType]
 
 
-def plain_apidoc_parser(apidoc: str) -> DocParserRetType:
+def plain_doc_parser(doc: str) -> DocParserRetType:
     """A doc parser which simply strip spaces
 
     Args:
 
-        apidoc: The function doc string
+        doc: The function doc string
 
     Returns:
 
         The parsed doc string and empty parameter list
 
     """
-    return inspect.cleandoc(apidoc), {}
+    return inspect.cleandoc(doc), {}
 
 
-def google_apidoc_parser(apidoc: str) -> DocParserRetType:
-    """A doc parser handling Google-style apidoc
+def google_doc_parser(doc: str) -> DocParserRetType:
+    """A doc parser handling Google-style docstring
 
     Args:
 
-        apidoc: The function doc string
+        doc: The function doc string
 
     Returns:
 
         The parsed doc string and parsed parameter list
 
     """
-    main_doc, param_docs = plain_apidoc_parser(apidoc)
+    main_doc, param_docs = plain_doc_parser(doc)
     # Split main part from other sections
     parts = re.split(r'(^(?:Args?|Returns?|Raises?|Yields?|Examples?|'
                      r'Attributes?):\s*$)',
@@ -604,12 +604,12 @@ class CalfInfo:
 
 def call(func: typing.Callable[..., typing.Any],
          args: typing.Optional[typing.Sequence[str]] = None) -> typing.Any:
-    """Call function using Google apidoc style with basic parameter recognition
+    """Call function using Google doc style with basic parameter recognition
 
     Args:
         func: The function to call
         args: The command line arguments, use sys.argv[1:] if None
 
     """
-    return CalfRunner([], doc_parser=google_apidoc_parser,
+    return CalfRunner([], doc_parser=google_doc_parser,
                       param_parser=basic_param_parser)(func, args)

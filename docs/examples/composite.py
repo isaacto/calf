@@ -39,7 +39,7 @@ class NameSelector(calf.LoaderSelector):
 def call(func):
     calf.CalfRunner(
         [NameSelector()],
-        doc_parser=calf.google_apidoc_parser,
+        doc_parser=calf.google_doc_parser,
         param_parser=calf.basic_param_parser)(func)
 
 
