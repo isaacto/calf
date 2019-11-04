@@ -9,7 +9,8 @@ At present the docstring needs to be written in Google style, but the
 design is that it is easy to swap the parsing function with a
 different parsing a different docstring style string.  In fact, the
 design is that you can customize a very wide range of characteristics
-of the module.
+of the module.  Used this way, you can treat calf as a cute way to
+configure your ArgumentParser.
 
 This package shamelessly stole a lot of ideas from plac, but hopes to
 be more focused on creating comfortable command line interfaces rather
@@ -40,8 +41,8 @@ You can run this with:
 
 Here `name` is a positional command line argument: a normal function
 argument always maps to a positional command line argument.  If you
-want a keyword argument instead, you can replace the function like
-this:
+want an option instead, you can replace the function argument with a
+keyword-only argument like this:
 
     def hello(*, name: str = 'Isaac') -> None:
         """Say hello
