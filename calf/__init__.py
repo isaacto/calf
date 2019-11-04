@@ -122,6 +122,10 @@ def basic_param_parser(pinfo: ParamInfo) -> None:
     ...}" as choices in parameter doc string.  The short option is
     removed from the parameter description as argparse shows it.
 
+    Args:
+
+        pinfo: The parameter information
+
     """
     match = re.match(r'^\((-[A-Za-z0-9])\)\s*(.*)', pinfo.desc)
     if match:
@@ -140,7 +144,15 @@ NO_DEFAULT = object()
 
 
 class CalfRunner:
-    "Convert callables to ArgumentParser and use it to provide a CLI"
+    """Convert callables to ArgumentParser and use it to provide a CLI
+
+    Args:
+
+        selectors: The selectors to match parameters and create loaders
+        doc_parser: How to parse the docstring
+        param_parser: How to parse the parameter string in the docstring
+
+    """
     def __init__(self, selectors: typing.Iterable['LoaderSelector'],
                  doc_parser: DocParserType,
                  param_parser: ParamParserType) -> None:
@@ -530,6 +542,8 @@ class VarArgBroker:
             var_ident: Either a substring to accept a parameter, or a
                 regex that must be matched for acceptance
 
+            param: The parameter to assign the remaining argument to
+
         """
         self._registered.append((var_ident, param))
 
@@ -590,6 +604,12 @@ class CalfInfo:
 
 def call(func: typing.Callable[..., typing.Any],
          args: typing.Optional[typing.Sequence[str]] = None) -> typing.Any:
-    "Call function using Google apidoc style with basic parameter recognition"
+    """Call function using Google apidoc style with basic parameter recognition
+
+    Args:
+        func: The function to call
+        args: The command line arguments, use sys.argv[1:] if None
+
+    """
     return CalfRunner([], doc_parser=google_apidoc_parser,
                       param_parser=basic_param_parser)(func, args)
