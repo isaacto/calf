@@ -13,6 +13,7 @@ def func0a() -> str:
 
 def test_degenerated_a():
     assert calf.call(func0a, []), 'hello'
+    assert calf.call(func0a, [], doc_parser=calf.sphinx_doc_parser), 'hello'
 
 
 def func0b() -> str:
@@ -68,11 +69,29 @@ def func1(var1: int, var2: bool, *, var3: str, var4: str='bar') \
     return var1, var2, var3, var4
 
 
+def func1s(var1: int, var2: bool, *, var3: str, var4: str='bar') \
+        -> typing.Tuple[int, bool, str]:
+    """Test function
+
+    :param var1: Variable 1
+    :param var2: (-f) Variable 2
+    :param var3: (-x) Variable 3
+    :param var4: (-v) Variable 4 {foo, bar, baz}
+    :other: other
+
+    """
+    return var1, var2, var3, var4
+
+
 def test_help(capsys):
     with pytest.raises(SystemExit):
         calf.call(func1, ['-h'])
     captured = capsys.readouterr()
-    assert '\nTest function\n' in captured.out
+    assert ' -f, ' in captured.out
+    with pytest.raises(SystemExit):
+        calf.call(func1s, ['-h'], doc_parser=calf.sphinx_doc_parser)
+    captured = capsys.readouterr()
+    assert ' -f, ' in captured.out
 
 
 def test_simple(capsys):

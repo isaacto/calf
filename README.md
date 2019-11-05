@@ -1,21 +1,23 @@
 # calf: Command Argument Loading Function for Python
 
-Calf lets you replace your command argument parsing code by simply
-writing a function.  The command argument parser is configured with a
-proper docstring, and perhaps some annotations and default values for
-the parameters.
+Calf lets you remove all your command argument parsing code, at least
+for simple cases.  Only the implemention function is left, with
+initialization code that use calf to call your function.  The command
+argument parser is configured with a proper docstring, and perhaps
+some annotations (argument type) and default values for the
+parameters.  In other words, stuffs that you would write anyway.
 
-At present the docstring needs to be written in Google style, but the
-design is that it is easy to swap the parsing function with a
-different parsing a different docstring style string.  In fact, the
-design is that you can customize a very wide range of characteristics
-of the module.  Used this way, you can treat calf as a cute way to
-configure your ArgumentParser.
+The docstring can be written in Google, Sphinx or epydoc style, and
+the design is that it is easy to swap the parsing function with yours.
+In fact, you can customize a very wide range of characteristics of
+calf, that you can treat it as a slightly restricted frontend to the
+ArgumentParser under the hood.  Used in this way, you can treat calf
+as a cute way to configure argparse.
 
-This package shamelessly stole a lot of ideas from plac, but hopes to
-be more focused on creating comfortable command line interfaces rather
-than becoming a Swiss knife for programs with text-only user
-interface.
+This package shamelessly stole a lot of ideas from
+[plac](https://pypi.org/project/plac/), but hopes to be more focused
+on creating comfortable command line interfaces rather than becoming a
+Swiss knife for programs with text-only user interface.
 
 ## Basic example
 
@@ -35,7 +37,11 @@ Hello-world looks like this:
         import calf
         calf.call(hello)
 
-You can run this with:
+The first thing to note is that the program uses Google docstring
+style.  If you want to use another style, just add
+`doc_parser=<parser>` to `calf.call`.  Here `<parser>` may be
+`calf.google_doc_parser` or `calf.sphinx_doc_parser`.  You can run
+this program with:
 
     hello.py Isaac
 

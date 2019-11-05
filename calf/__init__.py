@@ -83,6 +83,32 @@ def google_doc_parser(doc: str) -> DocParserRetType:
     return main_doc, param_docs
 
 
+def sphinx_doc_parser(doc: str) -> DocParserRetType:
+    """A doc parser handling Sphinx-style and epydoc-style docstring
+
+    Args:
+
+        doc: The function doc string
+
+    Returns:
+
+        The parsed doc string and parsed parameter list
+
+    """
+    main_doc, param_docs = plain_doc_parser(doc)
+    parts = re.split(r'(^[:@].*:)', main_doc, 1, re.M)
+    if len(parts) <= 1:
+        return main_doc, param_docs
+    main_doc = parts[0]
+    for group in indented_groups(''.join(parts[1:])):
+        match = re.match(r'[:@]param\s+([^:]+):\s*(.*)$', ' '.join(group))
+        if not match:
+            continue
+        name = match.group(1).strip('`').lstrip('*')
+        param_docs[name] = ParamInfo(match.group(2).strip())
+    return main_doc, param_docs
+
+
 def indented_groups(inp: str) -> typing.Iterator[typing.List[str]]:
     """Split text according to indentation
 
@@ -631,7 +657,9 @@ class CalfInfo:
 
 
 def call(func: typing.Callable[..., typing.Any],
-         args: typing.Optional[typing.Sequence[str]] = None) -> typing.Any:
+         args: typing.Optional[typing.Sequence[str]] = None,
+         doc_parser=google_doc_parser,
+         param_parser=basic_param_parser) -> typing.Any:
     """Call function using Google doc style with basic parameter recognition
 
     Args:
@@ -639,5 +667,5 @@ def call(func: typing.Callable[..., typing.Any],
         args: The command line arguments, use sys.argv[1:] if None
 
     """
-    return CalfRunner([], doc_parser=google_doc_parser,
-                      param_parser=basic_param_parser)(func, args)
+    return CalfRunner(
+        [], doc_parser=doc_parser, param_parser=param_parser)(func, args)
