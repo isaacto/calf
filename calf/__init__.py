@@ -131,9 +131,10 @@ def basic_param_parser(pinfo: ParamInfo) -> None:
     if match:
         pinfo.desc = match.group(2)
         pinfo.short = match.group(1)
-    match = re.match(r'.*\{([^{}]*)\}[.,;]?$', pinfo.desc)
-    if match and ',' in match.group(1):
-        pinfo.choices = re.split(r',\s*', match.group(1))
+    match = re.match(r'^(.*?) *\{([^{}]*)\}([.,;]?)$', pinfo.desc)
+    if match and ',' in match.group(2):
+        pinfo.choices = [x.strip() for x in re.split(r',\s*', match.group(2))]
+        pinfo.desc = match.group(1) + match.group(3)
     pinfo.desc = pinfo.desc.strip()
 
 
@@ -391,6 +392,17 @@ class BaseArgLoader:
         """
         raise NotImplementedError()
 
+    def basic_arg_extra(self) -> typing.Dict[str, typing.Any]:
+        "Get basic argument extra parameters"
+        extra = {}  # type: typing.Dict[str, typing.Any]
+        if self._default is not NO_DEFAULT:
+            extra['default'] = self._default
+        if self._info:
+            extra['help'] = self._info.desc
+            if self._info.choices:
+                extra['choices'] = self._info.choices
+        return extra
+
     def load(self, namespace: argparse.Namespace,
              pos: typing.List[typing.Any],
              kwd: typing.Dict[str, typing.Any]) -> None:
@@ -421,12 +433,9 @@ class PosArgLoader(BaseArgLoader):
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
         names = [self._param]
-        extra = {}  # type: typing.Dict[str, typing.Any]
-        if self._default is not NO_DEFAULT:
-            extra['default'] = self._default
+        extra = self.basic_arg_extra()
+        if 'default' in extra:
             extra['nargs'] = '?'
-        if self._info:
-            extra['help'] = self._info.desc
         assert calf_info.parser
         calf_info.parser.add_argument(*names, **extra)
 
@@ -443,16 +452,17 @@ class OptArgLoader(BaseArgLoader):
         names = ['--' + self._param]
         if self._info and self._info.short:
             names.insert(0, self._info.short)
-        extra = {}  # type: typing.Dict[str, typing.Any]
-        if self._info:
-            extra['help'] = self._info.desc
+        extra = self.basic_arg_extra()
         if self._ptype == bool:
-            extra['default'] = False
-            extra['action'] = 'store_true'
-        elif self._default != NO_DEFAULT:
-            extra['default'] = self._default
-            extra['metavar'] \
-                = self._default if self._default != '' else '""'
+            extra = {'default': False, 'action': 'store_true'}
+            if self._info:
+                extra['help'] = self._info.desc
+        else:
+            if 'default' in extra:
+                extra['metavar'] \
+                    = self._default if self._default != '' else '""'
+            else:
+                extra['required'] = True
         assert calf_info.parser
         calf_info.parser.add_argument(*names, **extra)
 
@@ -485,7 +495,7 @@ class MapArgLoader(BaseArgLoader):
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
         extra = {'nargs': '*',
-                 'metavar': 'key=val'}
+                 'metavar': 'key=val'}  # type: typing.Dict[str, typing.Any]
         if self._info:
             extra['help'] = self._info.desc
         calf_info.var_arg_broker.register_var(

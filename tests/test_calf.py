@@ -58,17 +58,18 @@ def test_degenerated_c(capsys):
     assert 'func0c' in captured.out
 
 
-def func1(var1: int, var2: bool, *, var3: str='bar') \
+def func1(var1: int, var2: bool, *, var3: str, var4: str='bar') \
         -> typing.Tuple[int, bool, str]:
     """Test function
 
     Args:
         var1: Variable 1
         var2: (-f) Variable 2
-        var3: (-v) Variable 3 {foo, bar, baz}
+        var3: (-x) Variable 3
+        var4: (-v) Variable 4 {foo, bar, baz}
 
     """
-    return var1, var2, var3
+    return var1, var2, var3, var4
 
 
 def test_help(capsys):
@@ -81,9 +82,9 @@ def test_help(capsys):
 
 
 def test_simple():
-    assert calf.call(func1, ['12']) == (12, False, 'bar')
+    assert calf.call(func1, ['12', '--var3', 'x']) == (12, False, 'x', 'bar')
     assert calf.call(
-        func1, ['12', '-f', '-v', 'foo']) == (12, True, 'foo')
+        func1, ['12', '-f', '-v', 'foo', '-x', '5']) == (12, True, '5', 'foo')
 
 
 def func2(*args, **kwargs: str) -> typing.Tuple[  # type: ignore
@@ -164,7 +165,7 @@ class NameSelector(calf.LoaderSelector):
 def test_composite():
     assert calf.CalfRunner(
         [NameSelector()],
-        doc_parser=calf.google_apidoc_parser,
+        doc_parser=calf.google_doc_parser,
         param_parser=calf.basic_param_parser)(func5, []) == Name('Isaac', 'To')
 
 

@@ -22,7 +22,7 @@ def hello(name: str = 'Isaac', *args, style = 2, **kwargs: float) -> None:
 
     Args:
 
-        name: name of to say hello to
+        name: name to say hello to
 
         style: (-s) style, choose among {1, 2, 3}
 
