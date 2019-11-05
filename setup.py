@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='calf',
-    version='0.1.5',
+    version='0.1.6',
     python_requires='~=3.5',
     author='Isaac To',
     author_email='isaac.to@gmail.com',
