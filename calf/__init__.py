@@ -420,6 +420,21 @@ class BaseArgLoader:
         """
         raise NotImplementedError()
 
+    def conv(self, val: typing.Any):
+        """Perform value conversion
+
+        Args:
+
+            val: The value to convert
+
+        """
+        try:
+            return self._ptype(val)
+        except ValueError:
+            print('Error: Value "%s" cannot be converted to type %s'
+                  % (val, self._ptype.__name__), file=sys.stderr)
+            sys.exit(1)
+
 
 class PosArgLoader(BaseArgLoader):
     """Define how to handle a positional parameter
@@ -445,7 +460,7 @@ class PosArgLoader(BaseArgLoader):
     def load(self, namespace: argparse.Namespace,
              pos: typing.List[typing.Any],
              kwd: typing.Dict[str, typing.Any]) -> None:
-        pos.append(self._ptype(getattr(namespace, self._param)))
+        pos.append(self.conv(getattr(namespace, self._param)))
 
 
 class OptArgLoader(BaseArgLoader):
@@ -472,7 +487,7 @@ class OptArgLoader(BaseArgLoader):
     def load(self, namespace: argparse.Namespace,
              pos: typing.List[typing.Any],
              kwd: typing.Dict[str, typing.Any]) -> None:
-        kwd[self._param] = self._ptype(getattr(namespace, self._param))
+        kwd[self._param] = self.conv(getattr(namespace, self._param))
 
 
 class VarArgLoader(BaseArgLoader):
@@ -489,7 +504,7 @@ class VarArgLoader(BaseArgLoader):
     def load(self, namespace: argparse.Namespace,
              pos: typing.List[typing.Any],
              kwd: typing.Dict[str, typing.Any]) -> None:
-        pos.extend(self._ptype(val)
+        pos.extend(self.conv(val)
                    for val in getattr(namespace, self._param))
 
 
@@ -511,7 +526,7 @@ class MapArgLoader(BaseArgLoader):
              kwd: typing.Dict[str, typing.Any]) -> None:
         for pval in getattr(namespace, self._param):
             key, _, mval = pval.partition('=')
-            kwd[key] = self._ptype(mval)
+            kwd[key] = self.conv(mval)
 
 
 class CompositeArgLoader(BaseArgLoader):

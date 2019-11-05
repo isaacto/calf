@@ -30,10 +30,8 @@ def func0b() -> str:
 
 def test_degenerated_b(capsys):
     assert calf.call(func0b, []), 'hello'
-    try:
+    with pytest.raises(SystemExit):
         calf.call(func0b, ['-h'])
-    except SystemExit:
-        pass
     captured = capsys.readouterr()
     assert 'Say hello' in captured.out
     assert 'Constant' not in captured.out
@@ -50,10 +48,8 @@ def func0c() -> str:
 
 def test_degenerated_c(capsys):
     assert calf.call(func0c, []), 'hello'
-    try:
+    with pytest.raises(SystemExit):
         calf.call(func0c, ['-h'])
-    except SystemExit:
-        pass
     captured = capsys.readouterr()
     assert 'func0c' in captured.out
 
@@ -73,19 +69,20 @@ def func1(var1: int, var2: bool, *, var3: str, var4: str='bar') \
 
 
 def test_help(capsys):
-    try:
+    with pytest.raises(SystemExit):
         calf.call(func1, ['-h'])
-    except SystemExit:
-        pass
     captured = capsys.readouterr()
     assert '\nTest function\n' in captured.out
 
 
-def test_simple():
+def test_simple(capsys):
     assert calf.call(func1, ['12', '--var3', 'x']) == (12, False, 'x', 'bar')
     assert calf.call(
         func1, ['12', '-f', '-v', 'foo', '-x', '5']) == (12, True, '5', 'foo')
-
+    with pytest.raises(SystemExit):
+        calf.call(func1, ['x', '--var3', 'x'])
+    captured = capsys.readouterr()
+    assert 'cannot be converted' in captured.err
 
 def func2(*args, **kwargs: str) -> typing.Tuple[  # type: ignore
         typing.List[str], typing.Dict[str, str]]:
