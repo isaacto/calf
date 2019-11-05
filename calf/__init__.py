@@ -401,6 +401,9 @@ class BaseArgLoader:
             extra['help'] = self._info.desc
             if self._info.choices:
                 extra['choices'] = self._info.choices
+        if self._ptype is not str:
+            extra['help'] = '%s [%s]' % (extra.get('help', ''),
+                                         self._ptype.__name__)
         return extra
 
     def load(self, namespace: argparse.Namespace,
