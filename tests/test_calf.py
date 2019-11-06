@@ -14,6 +14,7 @@ def func0a() -> str:
 def test_degenerated_a():
     assert calf.call(func0a, []), 'hello'
     assert calf.call(func0a, [], doc_parser=calf.sphinx_doc_parser), 'hello'
+    assert calf.call(func0a, [], doc_parser=calf.numpy_doc_parser), 'hello'
 
 
 def func0b() -> str:
@@ -56,7 +57,7 @@ def test_degenerated_c(capsys):
 
 
 def func1(var1: int, var2: bool, *, var3: str, var4: str='bar') \
-        -> typing.Tuple[int, bool, str]:
+        -> typing.Tuple[int, bool, str, str]:
     """Test function
 
     Args:
@@ -70,7 +71,7 @@ def func1(var1: int, var2: bool, *, var3: str, var4: str='bar') \
 
 
 def func1s(var1: int, var2: bool, *, var3: str, var4: str='bar') \
-        -> typing.Tuple[int, bool, str]:
+        -> typing.Tuple[int, bool, str, str]:
     """Test function
 
     :param var1: Variable 1
@@ -78,6 +79,30 @@ def func1s(var1: int, var2: bool, *, var3: str, var4: str='bar') \
     :param var3: (-x) Variable 3
     :param var4: (-v) Variable 4 {foo, bar, baz}
     :other: other
+
+    """
+    return var1, var2, var3, var4
+
+
+def func1n(var1: int, var2: bool, *, var3: str, var4: str='bar') \
+        -> typing.Tuple[int, bool, str, str]:
+    """Test function
+
+    Parameter
+    ---------
+    var1
+       Variable 1
+    var2 :
+       (-f) Variable 2
+    var3:
+       (-x) Variable 3
+    var4 : str
+       (-v) Variable 4 {foo, bar, baz}
+
+    Returns
+    -------
+
+       Nothing
 
     """
     return var1, var2, var3, var4
@@ -92,6 +117,10 @@ def test_help(capsys):
         calf.call(func1s, ['-h'], doc_parser=calf.sphinx_doc_parser)
     captured = capsys.readouterr()
     assert ' -f, ' in captured.out
+    with pytest.raises(SystemExit):
+        calf.call(func1n, ['-h'], doc_parser=calf.numpy_doc_parser)
+    captured = capsys.readouterr()
+    assert ' -f, ' in captured.out
 
 
 def test_simple(capsys):
@@ -102,6 +131,7 @@ def test_simple(capsys):
         calf.call(func1, ['x', '--var3', 'x'])
     captured = capsys.readouterr()
     assert 'cannot be converted' in captured.err
+
 
 def func2(*args, **kwargs: str) -> typing.Tuple[  # type: ignore
         typing.List[str], typing.Dict[str, str]]:

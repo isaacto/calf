@@ -50,7 +50,7 @@ def plain_doc_parser(doc: str) -> DocParserRetType:
 
 
 def google_doc_parser(doc: str) -> DocParserRetType:
-    """A doc parser handling Google-style docstring
+    """A doc parser handling Google-style docstrings
 
     Args:
 
@@ -84,7 +84,7 @@ def google_doc_parser(doc: str) -> DocParserRetType:
 
 
 def sphinx_doc_parser(doc: str) -> DocParserRetType:
-    """A doc parser handling Sphinx-style and epydoc-style docstring
+    """A doc parser handling Sphinx-style and epydoc-style docstrings
 
     Args:
 
@@ -106,6 +106,35 @@ def sphinx_doc_parser(doc: str) -> DocParserRetType:
             continue
         name = match.group(1).strip('`').lstrip('*')
         param_docs[name] = ParamInfo(match.group(2).strip())
+    return main_doc, param_docs
+
+
+def numpy_doc_parser(doc: str) -> DocParserRetType:
+    """A doc parser handling Numpy-style docstrings
+
+    Args:
+
+        doc: The function doc string
+
+    Returns:
+
+        The parsed doc string and parsed parameter list
+
+    """
+    main_doc, param_docs = plain_doc_parser(doc)
+    parts = re.split(r'\s*([^\n]+\n\s*\s*-+\s*\n)', main_doc)
+    if len(parts) <= 1:
+        return main_doc, param_docs
+    main_doc = parts.pop(0)
+    while len(parts) >= 2:
+        header = parts[0]
+        value = parts[1]
+        parts[0:2] = []
+        if not re.match(r'parameters?\s*\n', header, re.I):
+            continue
+        for group in indented_groups(value):
+            name = group[0].split(':')[0].strip()
+            param_docs[name] = ParamInfo(' '.join(l.strip() for l in group[1:]))
     return main_doc, param_docs
 
 
