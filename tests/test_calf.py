@@ -123,20 +123,22 @@ def test_varargs():
         == (('foo', 'bar'), {'foo1': 'bar'})
 
 
-def func3(var1: int, var2: str = 'foo') -> typing.Tuple[int, str]:
+def func3(var1: int, var2: typing.Optional[int],
+          var3: str = 'foo') -> typing.Tuple[int, str]:
     """Test function
 
     Args:
         var1: Variable 1
         var2: Variable 2
+        var3: Variable 3
 
     """
-    return var1, var2
+    return var1, var2, var3
 
 
 def test_pos_default():
-    assert calf.call(func3, ['42', 'bar']) == (42, 'bar')
-    assert calf.call(func3, ['42']) == (42, 'foo')
+    assert calf.call(func3, ['42', '15', 'bar']) == (42, 15, 'bar')
+    assert calf.call(func3, ['42']) == (42, None, 'foo')
 
 
 def func4(**kwargs: str) -> typing.Dict[str, str]:

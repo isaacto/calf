@@ -405,6 +405,13 @@ class BaseArgLoader:
                  default: typing.Any) -> None:
         self._param = param
         self._ptype = ptype
+        if type(self._ptype) == type(typing.Optional[int]):
+            pargs = typing.cast(typing.Optional[typing.Tuple[typing.Any, ...]],
+                                getattr(self._ptype, '__args__'))
+            if pargs and len(pargs) == 2 and pargs[1] == type(None):
+                self._ptype = pargs[0]
+                if default is NO_DEFAULT:
+                    default = None
         self._info = info
         self._default = default
 
@@ -455,7 +462,7 @@ class BaseArgLoader:
 
         """
         try:
-            return self._ptype(val)
+            return val if val is None else self._ptype(val)
         except ValueError:
             print('Error: Value "%s" cannot be converted to type %s'
                   % (val, self._ptype.__name__), file=sys.stderr)

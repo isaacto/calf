@@ -75,6 +75,13 @@ a default value, but it doesn't mix with variable arguments as
 described below.  In this version we are explicit about the type of
 the argument.
 
+It is also possible to specify a default which provides no value (so
+the program knows that no value is provide).  This is done by either
+using a default value of None, or setting in parameter a type of a
+parameterized Typing.Optional (without setting a default), or both.
+In this case the normal construction of the target type will not
+happen.
+
 There is an exception: any boolean function argument becomes a
 default-off flag.  I failed to find a natural way to have a default-on
 flag, so it is not provided.
