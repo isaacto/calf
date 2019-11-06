@@ -3,21 +3,20 @@
 ## Why another command line parser?!
 
 During my works I came across a Python package called Plac.  I love it
-in first sight: what is a better way to create a CLI argument parser
-than to just subvert an arbitrary function, perhaps using a little bit
+in the first sight: what is better than creating a CLI argument parser
+by just subverting an arbitrary function, perhaps using a little bit
 of annotation or decoration?
 
-But after months of using the library, I started to have some strange
-feeling on the package.
+But after months using the library, I started to have mixed feelings
+on the package.
 
-The first sign of trouble comes when I started to use mypy.  I have to
+The first sign of trouble comes when I started using mypy.  I have to
 give up type checking for the main function, using `@no_type_check`.
-Fine, I just have a `main()` as stepping stone to the real function.
-The `main()` is for Plac, and has no type checking.  Still, one point
-taken away from the simplicity of Plac-driven UI.  Instead of writing
-my program as a function which Plac knows how to handle, I'm writing a
-special function for Plac so that I have a CLI.  This slight
-difference takes much of the fun away.
+Fine, I just write a `main()` as stepping stone to the real function.
+Still, one point taken away from the simplicity of Plac-driven UI.
+Instead of writing my program as a function which Plac knows how to
+handle, I'm writing a special function for Plac so that I have a CLI.
+This slight difference takes much of the fun away.
 
 It would be more desirable if Plac just read the type annotation of my
 function parameters (I call it parameters here to differentiate it
@@ -26,11 +25,12 @@ information for command options?  Even if Plac and mypy both supports
 PEP 593, the result would be uncomfortably verbose.
 
 The real trouble came when I `pylint` the scripts.  Suddenly I
-discovered that I have many scripts with very similar, but rather
-hairy, annotations.  And there is no way to factor them out.  While it
-is easy to write annotations, it is very hard to write a program to
+realized that I had many scripts with very similar, but rather hairy,
+annotations.  And there is no way to factor them out.  While it is
+easy to write annotations, it is very hard to write a program to
 produce functions on-the-fly with the exact parameters and
-annotations, just passing to Plac.  It simply doesn't worth the effort.
+annotations, just for passing to Plac.  It simply doesn't worth the
+effort.
 
 To be concrete, I have many programs that read an init-style config
 file.  I want to manually override some of the options when running
@@ -41,8 +41,8 @@ a few "basic" arguments...
 
     -c <config-file> -s sect1,sect2 sect3__opt3=val3 sect4__opt4=val4 ...
 
-With Plac, I created a few of annotations to support it, which gives
-my functions a couple of strings and a dict as parameters.  It is,
+With Plac, I created a few annotations to support it, which gives my
+functions a couple of strings and a dict as parameters.  It is,
 though, extremely hard to have those code refactored to remove the
 duplication.
 
@@ -52,15 +52,16 @@ After all, the function really just wants a Config object.  But again,
 Plac has no provision for parameters which takes more than one command
 line argument to populate.  The quick fix is to create extensible
 annotations to allow specifying the Config object or factory.  I did
-that, but that doesn't solve the other problems described earlier.
+that, but it is verbose, and it doesn't solve the other problems I've
+seen in Plac.
 
 That leaves me wonder: is there something really not Pythonic in the
 nice Plac package?  Is it conceptually wrong to use annotations like
-the way Plac did?  Then I notice the doc-strings of the Plac-facing
+the way Plac did?  Then I noticed the docstrings of the Plac-facing
 functions is a bit different from others: they won't describe the
 parameters.  Perhaps we should just describe the parameters in the doc
 strings as in other Python functions, rather than describing them in
-annotations that, unfortunately, would normally be monopolized by type
+the annotation system that, unfortunately, have be monopolized by type
 checkers?
 
 After a week of thinking and experiments, the idea of a new package is
@@ -71,13 +72,13 @@ born.
 I want a small package which does the following:
 
  1. Convert a target function to an argument parser using whatever
-    information available, call it using the command line arguments,
+    information available, use it to parse the command line arguments,
     and call the target function accordingly.
 
- 2. The converter is an object, created with parameters configuring
-    the converter.  This makes the converter extensible by either
-    sub-classing the converter class, or by sub-classing the classes
-    of the constructor parameter.
+ 2. This is done in a "Runner" object, created with parameters for
+    configuration.  So it is extensible by either sub-classing the
+    Runner class, or by sub-classing the classes of the constructor
+    parameters.
 
 This is quite a bit less than what Plac supports.  E.g., I have no
 intention to make calf an interpreter.
@@ -86,7 +87,7 @@ intention to make calf an interpreter.
 
 The information of Python functions is geared towards...
 
- 1. The function as a whole (e.g., doc-string), and
+ 1. The function as a whole (e.g., docstring), and
 
  2. The function parameters...
 
@@ -107,16 +108,16 @@ information is not exactly the same:
   * There is only one list of variable length arguments, but there may
     be multiple parameters needing it.
 
-So there are some mapping required.  To be convenient, this mapping
+So there are some mappings required.  To be convenient, this mapping
 must be configurable.
 
 ## Class list
 
 One can have a quick overview of the design of the module by looking
-at the classes it defines.
+at the main classes it defines.
 
-  * CalfRunner: Main object to convert functions to ArgumentParser and
-    call it.
+  * CalfRunner: Main object to convert a function to an ArgumentParser
+    and call it.
     
   * LoaderSelector: Specifies how to choose argument loaders.  A
     default LoaderSelector is normally used, but special-purpose ones
@@ -134,13 +135,14 @@ at the classes it defines.
     argparse.ArgumentParser.
 
   * CalfInfo: A POD class storing information during the conversion
-    process.  This includes the parsed function doc-string, param
+    process.  This includes the parsed function docstring, param
     docs, ArgLoader objects, VarArgBroker, the ArgumentParser, and the
     Namespace resulting from command line parsing.
 
-  * ParamInfo: Information about a parameter extracted from
-    doc-string.  Includes its description, short name and allowable
-    values.
+  * ParamInfo: Information about a parameter extracted from docstring.
+    Includes its description, short name and allowable values.
+    ArgLoader's return them, so if you define your own ArgLoader you
+    can create your own subclass of ParamInfo.
 
 ## The call process
 
@@ -150,18 +152,18 @@ converter class then does the following:
 
   * A CalfInfo object is created.
 
-  * The `doc_parser` function is called, to parse the doc-string of
-    the target function to a parsed docstring and a list of ParamInfo
+  * The `doc_parser` function is called, to parse the docstring of the
+    target function to a parsed docstring and a list of ParamInfo
     objects.  The simple parser does basic space stripping, while the
-    `google_doc_parser` would keep only the leading sections and
-    parse the "Args" section to ParamInfo.
+    default `google_doc_parser` and other subclasses would keep only
+    the leading sections and parse the "Args" section to ParamInfo.
     
   * The ParamInfo's are parsed using a `param_parser` function,
     finding and possibly stripping away information needed by calf.
 
   * The ArgumentParser is created with `create_arg_parser`.
-    Subclasses may override this process, e.g., to use its own
-    options.
+    Subclasses of CalfRunner may override this process, e.g., to use
+    its own options.
 
   * For each function parameter, a LoaderSelector is selected using
     the `match()` method of all registered selectors.  The selected
@@ -186,17 +188,19 @@ converter class then does the following:
   * The target function with the positional and keyword parameter list
     obtained above.
 
-## `google_doc_parser`
+## `basic_param_parser`
 
-The `google_doc_parser` provides a little more data than a regular
-Google-style docstring:
+The `basic_param_parser` processes the portion of docstring for each
+parameter as follows:
 
-  * An optional "short option string" created by the leading
-    parenthesized short-option string, like "(-o)" if found.
+  * If found, a leading parenthesized short-option string, like
+    "(-o)", is treated as an "short option string".  It is stripped
+    away from the doc and saved in the ParamInfo structure.
 
-  * An optional "choices" created by the final brace-parenthesized
-    list like "{foo, bar}", perhaps followed by a comma, semicolon
-    or period.
+  * If found, a final brace-parenthesized list like "{foo, bar}",
+    perhaps followed by a comma, semicolon or period, is treated as
+    choices of the parameter (unconverted) values.  Again it is
+    stripped away from the doc and saved in the ParamInfo structure.
 
 A function documented fully would look like this:
 

@@ -2,14 +2,14 @@
 
 Calf lets you remove all your command argument parsing code, at least
 for simple cases.  Only the implemention function is left, with
-initialization code that use calf to call your function.  The command
+initialization code that uses calf to call this function.  The command
 argument parser is configured with a proper docstring, and perhaps
 some annotations (argument type) and default values for the
 parameters.  In other words, stuffs that you would write anyway.
 
 The docstring can be written in Google, Sphinx or epydoc style, and
 the design is that it is easy to swap the parsing function with yours.
-In fact, you can customize a very wide range of characteristics of
+In fact, you can customize such a wide range of characteristics of
 calf, that you can treat it as a slightly restricted frontend to the
 ArgumentParser under the hood.  Used in this way, you can treat calf
 as a cute way to configure argparse.
@@ -37,18 +37,18 @@ Hello-world looks like this:
         import calf
         calf.call(hello)
 
-The first thing to note is that the program uses Google docstring
+The first thing to notice is that the program uses Google docstring
 style.  If you want to use another style, just add
 `doc_parser=<parser>` to `calf.call`.  Here `<parser>` may be
-`calf.google_doc_parser` or `calf.sphinx_doc_parser`.  You can run
-this program with:
+`calf.google_doc_parser`, `calf.sphinx_doc_parser` or
+`calf.numpy_doc_parser`.  You can run this program with:
 
     hello.py Isaac
 
 Here `name` is a positional command line argument: a normal function
 argument always maps to a positional command line argument.  If you
-want an option instead, you can replace the function argument with a
-keyword-only argument like this:
+want an option instead, you can replace the function argument like
+this:
 
     def hello(*, name: str = 'Isaac') -> None:
         """Say hello
@@ -67,24 +67,24 @@ Then the program is run like one of the following:
     hello.py -n Cathy
 
 Now `name` is an option: a keyword-only function argument always maps
-to a function.  Note also that `-n` in the docstring describing the
-argument, leading in parentheses, becomes the short option name.  It
-is usually a good idea to allow options not to be specified, by
+to a function.  In this version we are explicit about the type of the
+argument.  Note also that the leading `-n` in the docstring describing
+the argument, enclosed in parentheses, becomes the short option name.
+
+It is usually a good idea to allow options not to be specified, by
 providing a default value.  Positional arguments can also be provided
-a default value, but it doesn't mix with variable arguments as
-described below.  In this version we are explicit about the type of
-the argument.
+a default value, but it doesn't mix well with variable arguments
+described below.
 
 It is also possible to specify a default which provides no value (so
 the program knows that no value is provide).  This is done by either
 using a default value of None, or setting in parameter a type of a
-parameterized Typing.Optional (without setting a default), or both.
-In this case the normal construction of the target type will not
-happen.
+parameterized Typing.Optional (without setting a default).  In this
+case the normal construction of the target type will not happen.
 
-There is an exception: any boolean function argument becomes a
-default-off flag.  I failed to find a natural way to have a default-on
-flag, so it is not provided.
+There is a special case: any boolean function argument becomes a
+default-off flag.  I cannot find a natural way to have a default-on
+flag, so it is not provided.  (Let me know if you think otherwise!)
 
 Variable arguments and keyword arguments can also be used.  Variable
 arguments will become a list of the specified type:
@@ -93,21 +93,29 @@ arguments will become a list of the specified type:
         """Sum numbers"""
         print('Sum =', sum(args, 0))
 
+Here the argument type is "int".  The string passed in the command
+line argument will be converted to this type, and in the help message
+there will be a little hint (looking like "[int]") indicating the
+needed type.
+
 Keyword arguments causes command line arguments like "<name>=<value>"
-to be stolen from the var-arg and form a map.
+to be stolen from the var-arg and form a map.  A type can still be
+provided.
 
 ## Advanced capability
 
-You can have your function accept other types.  Calf would normally
-use one positional argument or option for each function argument, and
+You can have your function to accept other types.  Calf normally uses
+one positional argument or option for each function argument, and
 whatever string you specified in the argument will be passed to the
 type you specified (via default argument or annotation) as
 constructor.  But you can extend calf by creating a subclass of
 "selector" which selects function arguments based on name and type.
-It then specifies how to create "loader" to handle the function
-argument, and a loader an use multiple command line arguments.  See
-`composite.py` in the docs directory to see how this is done.
+It then specifies how to create a "loader" to handle the function
+argument, which may use multiple command line arguments (or do any
+other interaction with the ArgumentParser).  See `composite.py` in the
+docs directory to see how this is done, for the common case.
 
-Other parts of the module can also be overridden.  See the design
-document in the docs directory to understand the design and do all
-sorts of things with calf.
+Other parts of the module can also be overridden.  For example, you
+can change the docstring parser and parameter doc parser.  See the
+design document in the docs directory to understand the design and do
+all sorts of things with calf.
