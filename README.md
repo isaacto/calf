@@ -104,6 +104,12 @@ Keyword arguments cause command line arguments like "<name>=<value>"
 to be stolen from the var-arg and form a map.  A type can still be
 provided.
 
+Finally, if you're tired of writing initialization code, you have an
+additional option to directly place your module under your
+PYTHONPATH.  Then you can run your program simply like
+
+    calf hello.hello -n Isaac
+
 ## Advanced capability
 
 You can have your function to accept other types.  Calf normally uses
