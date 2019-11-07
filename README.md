@@ -7,12 +7,12 @@ argument parser is configured with a proper docstring, and perhaps
 some annotations (argument type) and default values for the
 parameters.  In other words, stuffs that you would write anyway.
 
-The docstring can be written in Google, Sphinx or epydoc style, and
-the design is that it is easy to swap the parsing function with yours.
-In fact, you can customize such a wide range of characteristics of
-calf, that you can treat it as a slightly restricted frontend to the
-ArgumentParser under the hood.  Used in this way, you can treat calf
-as a cute way to configure argparse.
+The docstring can be written in Google, Sphinx, epydoc or Numpy style,
+and the design is that it is easy to swap the parsing function with
+yours.  In fact, you can customize such a wide range of
+characteristics of calf, that you can treat it as a slightly
+restricted frontend to the ArgumentParser under the hood.  Used in
+this way, you can treat calf as a cute way to configure argparse.
 
 This package shamelessly stole a lot of ideas from
 [plac](https://pypi.org/project/plac/), but hopes to be more focused
@@ -40,8 +40,8 @@ Hello-world looks like this:
 The first thing to notice is that the program uses Google docstring
 style.  If you want to use another style, just add
 `doc_parser=<parser>` to `calf.call`.  Here `<parser>` may be
-`calf.google_doc_parser`, `calf.sphinx_doc_parser` or
-`calf.numpy_doc_parser`.  You can run this program with:
+`calf.google_doc_parser`, `calf.sphinx_doc_parser` (for Sphinx or
+Epydoc) or `calf.numpy_doc_parser`.  You can run this program with:
 
     hello.py Isaac
 
@@ -96,9 +96,11 @@ arguments will become a list of the specified type:
 Here the argument type is "int".  The string passed in the command
 line argument will be converted to this type, and in the help message
 there will be a little hint (looking like "[int]") indicating the
-needed type.
+needed type.  Also note that in this example I don't add documentation
+for the arguments: the docstring information is optional, without them
+there is no help string but everything else still works.
 
-Keyword arguments causes command line arguments like "<name>=<value>"
+Keyword arguments cause command line arguments like "<name>=<value>"
 to be stolen from the var-arg and form a map.  A type can still be
 provided.
 

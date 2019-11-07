@@ -18,11 +18,14 @@ Instead of writing my program as a function which Plac knows how to
 handle, I'm writing a special function for Plac so that I have a CLI.
 This slight difference takes much of the fun away.
 
-It would be more desirable if Plac just read the type annotation of my
-function parameters (I call it parameters here to differentiate it
-from command line arguments).  But where to put the additional
-information for command options?  Even if Plac and mypy both supports
-PEP 593, the result would be uncomfortably verbose.
+Plac is designed at a time when the community doesn't know what is the
+best use of annotations, but after the years there is a consensus that
+it should be type information.  It would be more desirable if Plac
+just read the type annotation of my function parameters (I call it
+parameters here to differentiate it from command line arguments).  But
+where to put the additional information for command options?  Even if
+Plac and mypy both supports PEP 593, the result would be uncomfortably
+verbose.
 
 The real trouble came when I `pylint` the scripts.  Suddenly I
 realized that I had many scripts with very similar, but rather hairy,
@@ -55,17 +58,26 @@ annotations to allow specifying the Config object or factory.  I did
 that, but it is verbose, and it doesn't solve the other problems I've
 seen in Plac.
 
-That leaves me wonder: is there something really not Pythonic in the
-nice Plac package?  Is it conceptually wrong to use annotations like
-the way Plac did?  Then I noticed the docstrings of the Plac-facing
-functions is a bit different from others: they won't describe the
-parameters.  Perhaps we should just describe the parameters in the doc
-strings as in other Python functions, rather than describing them in
-the annotation system that, unfortunately, have be monopolized by type
-checkers?
+The author of Plac explained that the library is still there just so
+that existing users are still supported, and he himself won't use it
+anymore.  But how to do it better nowadays, where even the slowest
+distribution (Debian) gets Python 3.5?
+
+I suddenly noticed the docstrings of the Plac-facing functions is a
+bit different from others: they won't describe the parameters.
+Perhaps we should just describe the parameters in the doc strings as
+in other Python functions?
 
 After a week of thinking and experiments, the idea of a new package is
-born.
+born.  After implementing the package, I found that there is an
+existing implementation: [docopt](https://github.com/docopt/docopt).
+But, unluckily (or perhaps I should say luckily), it didn't solve my
+problem -- it is not extensible, and using that requires you to write
+functions that looks very different from normal functions.  In
+contrast, calf is so non-intrusive to your function that I can provide
+a generic calf executable and you'd call many functions in modules
+sitting on your PYTHONPATH... and it can be hard to know which are the
+ones unless you tell your users!
 
 ## Aim
 
