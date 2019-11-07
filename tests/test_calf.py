@@ -5,6 +5,7 @@ import typing
 import pytest
 
 import calf
+import calf.__main__ as cm
 
 
 def func0a() -> str:
@@ -224,3 +225,9 @@ def test_unimplemented():
         base_loader.prepare(calf_info)
     with pytest.raises(NotImplementedError):
         base_loader.load(argparse.Namespace(), [], {})
+
+
+def test_main():
+    cm.main(['test_calf', 'test_calf.func0a'])
+    with pytest.raises(SystemExit):
+        cm.main(['test_calf', '-h'])

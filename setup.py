@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='calf',
-    version='0.2',
+    version='0.3',
     python_requires='~=3.5',
     author='Isaac To',
     author_email='isaac.to@gmail.com',
@@ -14,6 +14,11 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/isaacto/calf',
     packages=setuptools.find_packages(),
+    entry_points={
+        "console_scripts": [
+            "calf=calf.__main__:main",
+        ]
+    },
     package_data={'calf': ['py.typed']},
     classifiers=[
         'Development Status :: 4 - Beta',

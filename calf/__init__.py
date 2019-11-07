@@ -217,7 +217,8 @@ class CalfRunner:
         self._param_parser = param_parser
 
     def __call__(self, func: FuncType,
-                 args: typing.Optional[typing.Sequence[str]] = None) \
+                 args: typing.Optional[typing.Sequence[str]] = None,
+                 prog: typing.Optional[str] = None) \
             -> typing.Any:
         """Convert func to a parser, collect arguments and call func
 
@@ -225,19 +226,21 @@ class CalfRunner:
 
             func: The function to convert and call
             args: The command line arguments, use sys.argv if None
+            prog: The program name
 
         Returns:
 
             Whatever func returns
 
         """
-        calf_info = self.get_calf(func)
+        calf_info = self.get_calf(func, prog)
         namespace = self.parse_args(
             calf_info, sys.argv[1:] if args is None else args)
         pos, kwd = self.ns2params(calf_info, namespace)
         return func(*pos, **kwd)
 
-    def get_calf(self, func: FuncType) -> 'CalfInfo':
+    def get_calf(self, func: FuncType,
+                 prog: typing.Optional[str] = None) -> 'CalfInfo':
         """Get calf information object
 
         Parse the docstring of func and inspect its parameters to
@@ -260,7 +263,7 @@ class CalfRunner:
             = self._doc_parser(func.__doc__ or '')
         for pinfo in calf_info.param_info.values():
             self._param_parser(pinfo)
-        self.create_arg_parser(calf_info)
+        self.create_arg_parser(calf_info, prog)
         specs = calf_info.param_specs = inspect.getfullargspec(func)
         params = specs.args or []
         defaults = list(specs.defaults or ())
@@ -277,15 +280,18 @@ class CalfRunner:
             self.add_param(calf_info, specs.varargs, NO_DEFAULT, 'var')
         return calf_info
 
-    def create_arg_parser(self, calf_info: 'CalfInfo') -> None:
+    def create_arg_parser(self, calf_info: 'CalfInfo',
+                          prog: typing.Optional[str] = None) -> None:
         """Create the ArgumentParser in calf_info
 
         Args:
 
             calf_info: The calf info object
+            prog: The program name
 
         """
         calf_info.parser = argparse.ArgumentParser(
+            prog=prog,
             description=calf_info.usage,
             formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -482,7 +488,7 @@ class BaseArgLoader:
         """
         raise NotImplementedError()
 
-    def conv(self, val: typing.Any):
+    def conv(self, val: typing.Optional[str]) -> typing.Any:
         """Perform value conversion
 
         Args:
@@ -694,14 +700,18 @@ class CalfInfo:
 
 def call(func: typing.Callable[..., typing.Any],
          args: typing.Optional[typing.Sequence[str]] = None,
-         doc_parser=google_doc_parser,
-         param_parser=basic_param_parser) -> typing.Any:
+         prog: typing.Optional[str] = None,
+         doc_parser: DocParserType = google_doc_parser,
+         param_parser: ParamParserType = basic_param_parser) -> typing.Any:
     """Call function using Google doc style with basic parameter recognition
 
     Args:
         func: The function to call
         args: The command line arguments, use sys.argv[1:] if None
+        prog: Name of the program
+        doc_parser: The doc parser to use
+        param_parser: The parameter parser to use
 
     """
     return CalfRunner(
-        [], doc_parser=doc_parser, param_parser=param_parser)(func, args)
+        [], doc_parser=doc_parser, param_parser=param_parser)(func, args, prog)
