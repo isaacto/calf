@@ -116,12 +116,17 @@ You can have your function to accept other types.  Calf normally uses
 one positional argument or option for each function argument, and
 whatever string you specified in the argument will be passed to the
 type you specified (via default argument or annotation) as
-constructor.  But you can extend calf by creating a subclass of
-"selector" which selects function arguments based on name and type.
-It then specifies how to create a "loader" to handle the function
-argument, which may use multiple command line arguments (or do any
-other interaction with the ArgumentParser).  See `composite.py` in the
-docs directory to see how this is done, for the common case.
+constructor.  In cases that passing the string to the type constructor
+doesn't do the right thing (e.g., `datetime`), you can create your own
+conversion function and add it to calf.CONVERTERS (see the
+`nextday.py` example in the docs directory).
+
+But you can also extend calf by creating a subclass of "selector" which
+selects function arguments based on name and type.  It then specifies
+how to create a "loader" to handle the function argument, which may
+use multiple command line arguments (or do any other interaction with
+the ArgumentParser).  See `composite.py` in the docs directory to see
+how this is done, for the common case.
 
 Other parts of the module can also be overridden.  For example, you
 can change the docstring parser and parameter doc parser.  See the

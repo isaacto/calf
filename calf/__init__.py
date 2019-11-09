@@ -18,6 +18,13 @@ import sys
 import typing
 
 
+ConverterType = typing.Callable[[str], typing.Any]
+
+
+CONVERTERS = {}  # type: typing.Dict[type, ConverterType]
+"Add a function here if you want to teach calf how to read a type"
+
+
 class ParamInfo:
     "Parameter information extracted from doc-strings"
     def __init__(self, desc: str, short: str = '',
@@ -499,7 +506,10 @@ class BaseArgLoader:
 
         """
         try:
-            return val if val is None else self._ptype(val)
+            return val if val is None \
+                else CONVERTERS.get(
+                        self._ptype, typing.cast(ConverterType,
+                                                 self._ptype))(val)
         except ValueError:
             print('Error: Value "%s" cannot be converted to type %s'
                   % (val, self._ptype.__name__), file=sys.stderr)
