@@ -19,15 +19,18 @@ handle, I'm writing a special function for Plac so that I have a CLI.
 This slight difference takes much of the fun away.
 
 Plac is designed at a time when the community doesn't know what is the
-best use of annotations, but after the years there is a consensus that
-it should be type information.  It would be more desirable if Plac
-just read the type annotation of my function parameters (I call it
+best use of annotations.  But after the years, there is a consensus
+that it should be type information.  In fact, PEP 563 clearly states
+that annotations that are not type information should be considered
+deprecated, so Plac is among the casualties (as well as a similar
+library called "begins").  It would be more desirable if Plac just
+read the type annotation of my function parameters (I call it
 parameters here to differentiate it from command line arguments).  But
 where to put the additional information for command options?  Even if
 Plac and mypy both supports PEP 593, the result would be uncomfortably
 verbose.
 
-The real trouble came when I `pylint` the scripts.  Suddenly I
+The deeper trouble came when I `pylint` the scripts.  Suddenly I
 realized that I had many scripts with very similar, but rather hairy,
 annotations.  And there is no way to factor them out.  While it is
 easy to write annotations, it is very hard to write a program to

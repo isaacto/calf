@@ -89,9 +89,9 @@ flag, so it is not provided.  (Let me know if you think otherwise!)
 Variable arguments and keyword arguments can also be used.  Variable
 arguments will become a list of the specified type:
 
-    def do_sum(*args: int) -> None:
+    def do_sum(*arg: int) -> None:
         """Sum numbers"""
-        print('Sum =', sum(args, 0))
+        print('Sum =', sum(arg, 0))
 
 Here the argument type is "int".  The string passed in the command
 line argument will be converted to this type, and in the help message
@@ -102,7 +102,21 @@ there is no help string but everything else still works.
 
 Keyword arguments cause command line arguments like "<name>=<value>"
 to be stolen from the var-arg and form a map.  A type can still be
-provided.
+provided.  For example, if you have:
+
+    import urllib.parse
+    def get_query_str(url, **item) -> None:
+        "Create URL with parameters"
+        qstr = urllib.parse.urlencode(item)
+        if qstr:
+            url += '?' + qstr
+        print(url)
+
+Then you can run something like
+
+    get_query_str.py http://a/b x=a=c y=/
+
+to get `http://a/b?y=%2F&x=a%3Dc`.
 
 Finally, if you're tired of writing initialization code, you have an
 additional option to directly place your module under your
