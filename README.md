@@ -1,7 +1,7 @@
 # calf: Command Argument Loading Function for Python
 
 Calf lets you remove all your command argument parsing code, at least
-for simple cases.  Only the implemention function is left, with
+for simple cases.  Only the implementation function is left, with
 initialization code that uses calf to call this function.  The command
 argument parser is configured with a proper docstring, and perhaps
 some annotations (argument type) and default values for the
