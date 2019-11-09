@@ -134,7 +134,8 @@ def numpy_doc_parser(doc: str) -> DocParserRetType:
             continue
         for group in indented_groups(value):
             name = group[0].split(':')[0].strip()
-            param_docs[name] = ParamInfo(' '.join(l.strip() for l in group[1:]))
+            param_docs[name] = ParamInfo(
+                ' '.join(l.strip() for l in group[1:]))
     return main_doc, param_docs
 
 
@@ -440,10 +441,11 @@ class BaseArgLoader:
                  default: typing.Any) -> None:
         self._param = param
         self._ptype = ptype
-        if type(self._ptype) == type(typing.Optional[int]):
+        if type(self._ptype) == type(typing.Optional[int]):  # noqa, type-check
             pargs = typing.cast(typing.Optional[typing.Tuple[typing.Any, ...]],
                                 getattr(self._ptype, '__args__'))
-            if pargs and len(pargs) == 2 and pargs[1] == type(None):
+            if pargs and len(pargs) == 2 \
+               and pargs[1] == type(None):  # noqa, type-check
                 self._ptype = pargs[0]
                 if default is NO_DEFAULT:
                     default = None
