@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import collections
 import typing
 
@@ -109,6 +110,11 @@ def func1n(var1: int, var2: bool, *, var3: str, var4: str='bar') \
     return var1, var2, var3, var4
 
 
+def func1d(var1: datetime.date, var2: datetime.time, var3: datetime.datetime) \
+        -> typing.Tuple[datetime.date, datetime.time, datetime.datetime]:
+    return var1, var2, var3
+
+
 def test_help(capsys):
     with pytest.raises(SystemExit):
         calf.call(func1, ['-h'])
@@ -132,6 +138,15 @@ def test_simple(capsys):
         calf.call(func1, ['x', '--var3', 'x'])
     captured = capsys.readouterr()
     assert 'cannot be converted' in captured.err
+    assert calf.call(func1d, ['2020-03-15', '22:30', '2020-03-15T22:30']) \
+        == (datetime.date(2020, 3, 15),
+            datetime.time(22, 30),
+            datetime.datetime(2020, 3, 15, 22, 30))
+    assert calf.call(
+        func1d, ['2020-03-15', '22:30:15', '2020-03-15T22:30:15']) \
+        == (datetime.date(2020, 3, 15),
+            datetime.time(22, 30, 15),
+            datetime.datetime(2020, 3, 15, 22, 30, 15))
 
 
 def func2(*args, **kwargs: str) -> typing.Tuple[  # type: ignore

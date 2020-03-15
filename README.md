@@ -132,7 +132,9 @@ whatever string you specified in the argument will be passed to the
 type you specified (via default argument or annotation) as
 constructor.  In cases that passing the string to the type constructor
 doesn't do the right thing (e.g., `datetime`), you can create your own
-conversion function and add it to calf.CONVERTERS (see the
+conversion function and add it to calf.CONVERTERS.  This has been done
+for `datetime.date`, `datetime.time` and `datetime.datetime`, and you
+can change how they behave by modifying `calf.CONVERTERS` (see the
 `nextday.py` example in the docs directory).
 
 But you can also extend calf by creating a subclass of "selector" which

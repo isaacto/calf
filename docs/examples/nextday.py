@@ -12,6 +12,6 @@ def nextday(date: datetime.date):
 if __name__ == '__main__':
     import calf
     def _dateconv(datestr):
-        return datetime.datetime.strptime(datestr, '%Y-%m-%d').date()
+        return datetime.datetime.strptime(datestr, '%d/%m/%Y').date()
     calf.CONVERTERS[datetime.date] = _dateconv
     calf.call(nextday)

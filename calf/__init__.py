@@ -11,6 +11,7 @@ parameters from command line arguments.
 
 import argparse
 import collections
+import datetime
 import inspect
 import itertools
 import re
@@ -21,8 +22,26 @@ import typing
 ConverterType = typing.Callable[[str], typing.Any]
 
 
-CONVERTERS = {}  # type: typing.Dict[type, ConverterType]
-"Add a function here if you want to teach calf how to read a type"
+def _time_convert(s: str) -> datetime.time:
+    try:
+        return datetime.datetime.strptime(s, '%H:%M').time()
+    except ValueError:
+        return datetime.datetime.strptime(s, '%H:%M:%S').time()
+
+
+def _datetime_convert(s: str) -> datetime.datetime:
+    try:
+        return datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M')
+    except ValueError:
+        return datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
+
+
+CONVERTERS = {
+    datetime.date: lambda s: datetime.datetime.strptime(s, '%Y-%m-%d').date(),
+    datetime.time: _time_convert,
+    datetime.datetime: _datetime_convert,
+}  # type: typing.Dict[type, ConverterType]
+"Add or change a function here if you want to teach calf how to read a type"
 
 
 class ParamInfo:
