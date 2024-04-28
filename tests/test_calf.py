@@ -242,6 +242,14 @@ def test_unimplemented():
         base_loader.load(argparse.Namespace(), [], {})
 
 
+def test_getinner():
+    with pytest.raises(RuntimeError):
+        calf.getinnertype(type(None), [])
+    with pytest.raises(RuntimeError):
+        calf.getinnertype(type(None), [int, str])
+    assert calf.getinnertype(type(None), [int, type(None)]) is int
+
+
 def test_main():
     cm.main(['test_calf', 'test_calf.func0a'])
     with pytest.raises(SystemExit):

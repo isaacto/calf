@@ -499,7 +499,7 @@ class BaseArgLoader:
                 extra['choices'] = self._info.choices
         if self._ptype is not str:
             extra['help'] = '%s [%s]' % (extra.get('help', ''),
-                                         self._ptype.__name__)
+                                         _gettype(self._ptype))
         return extra
 
     def load(self, namespace: argparse.Namespace,
@@ -525,10 +525,9 @@ class BaseArgLoader:
 
         """
         try:
-            return val if val is None \
-                else CONVERTERS.get(
-                        self._ptype, typing.cast(ConverterType,
-                                                 self._ptype))(val)
+            ptype = _gettype(self._ptype)
+            return val if val is None else \
+                CONVERTERS.get(ptype, typing.cast(ConverterType, ptype))(val)
         except ValueError:
             print('Error: Value "%s" cannot be converted to type %s'
                   % (val, self._ptype.__name__), file=sys.stderr)
@@ -560,6 +559,24 @@ class PosArgLoader(BaseArgLoader):
              pos: typing.List[typing.Any],
              kwd: typing.Dict[str, typing.Any]) -> None:
         pos.append(self.conv(getattr(namespace, self._param)))
+
+
+def _gettype(ptype: typing.Type[typing.Any]) -> typing.Type[typing.Any]:
+    if type(ptype).__name__ != 'UnionType':
+        return ptype
+    return getinnertype(ptype, ptype.__args__)  # pragma: no cover
+
+
+def getinnertype(
+        ptype: typing.Type[typing.Any], ptypes: list[typing.Type[typing.Any]]
+) -> typing.Type[typing.Any]:
+    found: list[typing.Type[typing.Any]] = []
+    for parg in ptypes:
+        if parg is not type(None):
+            found.append(parg)
+    if len(found) != 1:
+        raise RuntimeError('calf: Type %s not supported', ptype)
+    return found[0]
 
 
 class OptArgLoader(BaseArgLoader):
