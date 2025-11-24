@@ -27,7 +27,7 @@ classifiers=[
 ]
 
 [project.scripts]
-console_scripts = "calf:__main__"
+calf = "calf:__main__.main"
 
 [project.urls]
 Homepage = "https://github.com/isaacto/calf"
