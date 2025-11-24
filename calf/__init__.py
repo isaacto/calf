@@ -19,6 +19,9 @@ import sys
 import typing
 
 
+__version__ = '0.3.3'
+
+
 ConverterType = typing.Callable[[str], typing.Any]
 
 
@@ -36,27 +39,27 @@ def _datetime_convert(s: str) -> datetime.datetime:
         return datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
 
 
-CONVERTERS = {
+CONVERTERS: dict[type, ConverterType] = {
     datetime.date: lambda s: datetime.datetime.strptime(s, '%Y-%m-%d').date(),
     datetime.time: _time_convert,
     datetime.datetime: _datetime_convert,
-}  # type: typing.Dict[type, ConverterType]
+}
 "Add or change a function here if you want to teach calf how to read a type"
 
 
 class ParamInfo:
     "Parameter information extracted from doc-strings"
     def __init__(self, desc: str, short: str = '',
-                 choices: typing.Optional[typing.List[str]] = None) -> None:
+                 choices: typing.Optional[list[str]] = None) -> None:
         self.desc = desc
         "The description of the parameter"
         self.short = short
         "The short option string, like '-i'"
-        self.choices = choices  # type: typing.Optional[typing.List[str]]
+        self.choices: typing.Optional[list[str]] = choices
         "The possible choices"
 
 
-DocParserRetType = typing.Tuple[str, typing.Dict[str, ParamInfo]]
+DocParserRetType = tuple[str, dict[str, ParamInfo]]
 DocParserType = typing.Callable[[str], DocParserRetType]
 
 
@@ -165,7 +168,7 @@ def numpy_doc_parser(doc: str) -> DocParserRetType:
     return main_doc, param_docs
 
 
-def indented_groups(inp: str) -> typing.Iterator[typing.List[str]]:
+def indented_groups(inp: str) -> typing.Iterator[list[str]]:
     """Split text according to indentation
 
     Args:
@@ -370,8 +373,7 @@ class CalfRunner:
 
     def ns2params(self, calf_info: 'CalfInfo',
                   namespace: argparse.Namespace) \
-            -> typing.Tuple[typing.List[typing.Any],
-                            typing.Dict[str, typing.Any]]:
+            -> tuple[list[typing.Any], dict[str, typing.Any]]:
         """Construct parameter from namespace
 
         The conversion information is used to convert namespace
@@ -388,8 +390,8 @@ class CalfRunner:
             The positional and keyword arguments for calling the function
 
         """
-        pos = []  # type: typing.List[typing.Any]
-        kwd = {}  # type: typing.Dict[str, typing.Any]
+        pos: list[typing.Any] = []
+        kwd: dict[str, typing.Any] = {}
         for loader in calf_info.arg_loaders.values():
             loader.load(namespace, pos, kwd)
         return pos, kwd
@@ -468,7 +470,7 @@ class BaseArgLoader:
         self._param = param
         self._ptype = ptype
         if type(self._ptype) == type(typing.Optional[int]):  # noqa, type-check
-            pargs = typing.cast(typing.Optional[typing.Tuple[typing.Any, ...]],
+            pargs = typing.cast(typing.Optional[tuple[typing.Any, ...]],
                                 getattr(self._ptype, '__args__'))
             if pargs and len(pargs) == 2 \
                and pargs[1] == type(None):  # noqa, type-check
@@ -488,9 +490,9 @@ class BaseArgLoader:
         """
         raise NotImplementedError()
 
-    def basic_arg_extra(self) -> typing.Dict[str, typing.Any]:
+    def basic_arg_extra(self) -> dict[str, typing.Any]:
         "Get basic argument extra parameters"
-        extra = {}  # type: typing.Dict[str, typing.Any]
+        extra: dict[str, typing.Any] = {}
         if self._default is not NO_DEFAULT:
             extra['default'] = self._default
         if self._info:
@@ -503,8 +505,7 @@ class BaseArgLoader:
         return extra
 
     def load(self, namespace: argparse.Namespace,
-             pos: typing.List[typing.Any],
-             kwd: typing.Dict[str, typing.Any]) -> None:
+             pos: list[typing.Any], kwd: dict[str, typing.Any]) -> None:
         """Populate parameters for calling the target function
 
         Args:
@@ -556,8 +557,7 @@ class PosArgLoader(BaseArgLoader):
         calf_info.parser.add_argument(*names, **extra)
 
     def load(self, namespace: argparse.Namespace,
-             pos: typing.List[typing.Any],
-             kwd: typing.Dict[str, typing.Any]) -> None:
+             pos: list[typing.Any], kwd: dict[str, typing.Any]) -> None:
         pos.append(self.conv(getattr(namespace, self._param)))
 
 
@@ -601,8 +601,7 @@ class OptArgLoader(BaseArgLoader):
         calf_info.parser.add_argument(*names, **extra)
 
     def load(self, namespace: argparse.Namespace,
-             pos: typing.List[typing.Any],
-             kwd: typing.Dict[str, typing.Any]) -> None:
+             pos: list[typing.Any], kwd: dict[str, typing.Any]) -> None:
         kwd[self._param] = self.conv(getattr(namespace, self._param))
 
 
@@ -610,7 +609,7 @@ class VarArgLoader(BaseArgLoader):
     "Define how to handle a basic remaining option"
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
-        extra = {'nargs': '*'}  # type: typing.Dict[str, typing.Any]
+        extra: dict[str, typing.Any] = {'nargs': '*'}
         if self._info:
             extra['help'] = self._info.desc
         calf_info.var_arg_broker.register_var('', self._param)
@@ -618,8 +617,7 @@ class VarArgLoader(BaseArgLoader):
         calf_info.parser.add_argument(self._param, **extra)
 
     def load(self, namespace: argparse.Namespace,
-             pos: typing.List[typing.Any],
-             kwd: typing.Dict[str, typing.Any]) -> None:
+             pos: list[typing.Any], kwd: dict[str, typing.Any]) -> None:
         pos.extend(self.conv(val)
                    for val in getattr(namespace, self._param))
 
@@ -628,8 +626,7 @@ class MapArgLoader(BaseArgLoader):
     "Define how to handle a map-like remaining option"
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
-        extra = {'nargs': '*',
-                 'metavar': 'key=val'}  # type: typing.Dict[str, typing.Any]
+        extra: dict[str, typing.Any] = {'nargs': '*', 'metavar': 'key=val'}
         if self._info:
             extra['help'] = self._info.desc
         calf_info.var_arg_broker.register_var(
@@ -638,8 +635,7 @@ class MapArgLoader(BaseArgLoader):
         calf_info.parser.add_argument(self._param, **extra)
 
     def load(self, namespace: argparse.Namespace,
-             pos: typing.List[typing.Any],
-             kwd: typing.Dict[str, typing.Any]) -> None:
+             pos: list[typing.Any], kwd: dict[str, typing.Any]) -> None:
         for pval in getattr(namespace, self._param):
             key, _, mval = pval.partition('=')
             kwd[key] = self.conv(mval)
@@ -650,7 +646,7 @@ class CompositeArgLoader(BaseArgLoader):
                  info: typing.Optional[ParamInfo],
                  default: typing.Any,
                  ctor: FuncType,
-                 subloaders: typing.List[BaseArgLoader]) -> None:
+                 subloaders: list[BaseArgLoader]) -> None:
         super().__init__(param, ptype, info, default)
         self._ctor = ctor
         self._subloaders = subloaders
@@ -660,23 +656,23 @@ class CompositeArgLoader(BaseArgLoader):
             loader.prepare(calf_info)
 
     def load(self, namespace: argparse.Namespace,
-             pos: typing.List[typing.Any],
-             kwd: typing.Dict[str, typing.Any]) -> None:
-        vararg = []  # type: typing.List[typing.Any]
-        varkw = {}  # type: typing.Dict[str, typing.Any]
+             pos: list[typing.Any],
+             kwd: dict[str, typing.Any]) -> None:
+        vararg: list[typing.Any] = []
+        varkw: dict[str, typing.Any] = {}
         for loader in self._subloaders:
             loader.load(namespace, vararg, varkw)
         pos.append(self._ctor(*vararg, **varkw))
 
 
 VarIdentType = typing.Union[str, typing.Pattern[str]]
-BrokerTupleType = typing.Tuple[VarIdentType, str]
+BrokerTupleType = tuple[VarIdentType, str]
 
 
 class VarArgBroker:
     "Configure how remaining arguments are distributed among namespace"
     def __init__(self) -> None:
-        self._registered = []  # type: typing.List[BrokerTupleType]
+        self._registered: list[BrokerTupleType] = []
 
     def register_var(self, var_ident: VarIdentType, param: str) -> None:
         """Register a request to remaining argument
@@ -702,7 +698,7 @@ class VarArgBroker:
         return bool(var_ident.match(pval))
 
     def distribute(self, namespace: argparse.Namespace,
-                   others: typing.List[str]) -> None:
+                   others: list[str]) -> None:
         """Distribute variable length arguments among namespace records
 
         Collect the variable length argument, and look for a
@@ -737,13 +733,12 @@ class CalfInfo:
     "Conversion information"
     def __init__(self) -> None:
         self.usage = ''
-        self.param_specs = None  # type: typing.Optional[inspect.FullArgSpec]
-        self.param_info = {}  # type: typing.Dict[str, ParamInfo]
-        self.arg_loaders = collections.OrderedDict(
-        )  # type: typing.Dict[str, BaseArgLoader]
+        self.param_specs: typing.Optional[inspect.FullArgSpec] = None
+        self.param_info: dict[str, ParamInfo] = {}
+        self.arg_loaders: dict[str, BaseArgLoader] = collections.OrderedDict()
         self.var_arg_broker = VarArgBroker()
-        self.parser = None  # type: typing.Optional[argparse.ArgumentParser]
-        self.namespace = None  # type: typing.Optional[argparse.Namespace]
+        self.parser: typing.Optional[argparse.ArgumentParser] = None
+        self.namespace: typing.Optional[argparse.Namespace] = None
 
 
 def call(func: typing.Callable[..., typing.Any],

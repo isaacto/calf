@@ -7,7 +7,7 @@ import typing
 import calf
 
 
-def main(argv: typing.Optional[typing.List[str]] = None) -> None:
+def main(argv: typing.Optional[list[str]] = None) -> None:
     "The main function for your function"
     args = (sys.argv if argv is None else argv)[1:]
     fullname = args.pop(0)
