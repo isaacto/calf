@@ -19,7 +19,7 @@ import sys
 import typing
 
 
-__version__ = '0.4.1'
+__version__ = '0.5'
 
 
 ConverterType = typing.Callable[[str], typing.Any]
