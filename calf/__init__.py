@@ -517,7 +517,7 @@ class BaseArgLoader:
         """
         raise NotImplementedError()
 
-    def conv(self, val: typing.Optional[str]) -> typing.Any:
+    def conv(self, val: typing.Any) -> typing.Any:
         """Perform value conversion
 
         Args:
@@ -527,7 +527,7 @@ class BaseArgLoader:
         """
         try:
             ptype = _gettype(self._ptype)
-            return val if val is None else \
+            return val if val is None or isinstance(val, self._ptype) else \
                 CONVERTERS.get(ptype, typing.cast(ConverterType, ptype))(val)
         except ValueError:
             print('Error: Value "%s" cannot be converted to type %s'
