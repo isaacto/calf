@@ -126,7 +126,15 @@ Then you can run something like
 
     get_query_str.py http://a/b x=a=c y=/
 
-to get `http://a/b?y=%2F&x=a%3Dc`.
+to get `http://a/b?x=a%3Dc&y=%2F`.
+
+Note that only the arguments left over by the positional parameters are
+stolen this way, so give the values of the positional parameters first:
+running the program above as `get_query_str.py x=a` sets `url` to `x=a`
+and prints it unchanged.  Nor should a pair be named after a parameter
+of the function: the pair competes with that parameter for the same
+name, and which of them the function sees depends on the rest of the
+signature.
 
 Finally, if you're tired of writing initialization code, you have an
 additional option to directly place your module under your
