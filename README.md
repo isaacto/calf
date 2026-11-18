@@ -73,8 +73,9 @@ the argument, enclosed in parentheses, becomes the short option name.
 
 It is usually a good idea to allow options not to be specified, by
 providing a default value.  Positional arguments can also be provided
-a default value: the paragraph below on how such an argument settles
-also tells you what it does beside variable arguments.
+a default value: the section below on the argument filling rules of
+argparse tells you how such an argument is settled, and what that
+means beside variable arguments.
 
 It is also possible to specify a default which provides no value (so
 the program knows that no value is provide).  This is done by either
@@ -95,6 +96,53 @@ which stays None when the argument is absent, and one defaulting to True
 can still be given "0".  I cannot find a natural way to have a
 default-on flag, so it is not provided.  (Let me know if you think
 otherwise!)
+
+Variable arguments and keyword arguments can also be used.  Variable
+arguments will become a list of the specified type:
+
+    def do_sum(*arg: int) -> None:
+        """Sum numbers"""
+        print('Sum =', sum(arg, 0))
+
+Here the argument type is "int".  The string passed in the command
+line argument will be converted to this type, and in the help message
+there will be a little hint (looking like "[int]") indicating the
+needed type.  Also note that in this example I don't add documentation
+for the arguments: the docstring information is optional, without them
+there is no help string but everything else still works.
+
+Keyword arguments cause command line arguments like "<name>=<value>"
+to be stolen from the var-arg and form a map.  A type can still be
+provided.  For example, if you have:
+
+    import urllib.parse
+    def get_query_str(url, **item) -> None:
+        "Create URL with parameters"
+        qstr = urllib.parse.urlencode(item)
+        if qstr:
+            url += '?' + qstr
+        print(url)
+
+Then you can run something like
+
+    get_query_str.py http://a/b x=a=c y=/
+
+to get `http://a/b?x=a%3Dc&y=%2F`.  A pair should not be named after a
+parameter of the function (like `url` above): the pair competes with
+that parameter for the same name, and which of them the function sees
+depends on the rest of the signature.
+
+Finally, if you're tired of writing initialization code, you have an
+additional option to directly place your module under your PYTHONPATH.
+Then you can run your program simply like
+
+    calf hello.hello -n Isaac
+
+## Argument filling rules of argparse
+
+Calf hands your command line to argparse, so which argument reaches
+which parameter is argparse's business.  Two of its rules are worth
+knowing.
 
 Positional arguments are filled in order from the contiguous runs of
 command line arguments which are not options.  A parameter takes a
@@ -138,64 +186,22 @@ into an option that can be given anywhere: with
 `func.py d -s --baz d2` sets foo to 'd' and baz to 'd2'.
 
 A parameter which takes a variable number of arguments, `*args` or
-`**kwargs` (both below), gets what the settled positional arguments
-leave.  With `def func(foo='a', *args)`, `func.py x y` gives foo 'x'
-and args ('y',), and `func.py` alone leaves foo at its default with
-nothing for args: the first word of a run goes to foo before args sees
-any, so nothing reaches args while foo stays at its default.  To have
-both, foo has to come after `*args` in the signature, which makes it
+`**kwargs`, gets what the settled positional arguments leave.  With
+`def func(foo='a', *args)`, `func.py x y` gives foo 'x' and args
+('y',), and `func.py` alone leaves foo at its default with nothing for
+args: the first word of a run goes to foo before args sees any, so
+nothing reaches args while foo stays at its default.  To have both,
+foo has to come after `*args` in the signature, which makes it
 keyword-only.  Whether a defaulted parameter settles early or waits
 decides what else reaches args: add `*args` to the second example
 above, and `func.py 1 -s 2 3` leaves args empty, the run '2 3' being
 used up by qux and baz, while `func.py 1 2 -s 3 4` gives args '3' and
 '4', baz having been settled at its default by the longer run before
-the flag.
-
-Variable arguments and keyword arguments can also be used.  Variable
-arguments will become a list of the specified type:
-
-    def do_sum(*arg: int) -> None:
-        """Sum numbers"""
-        print('Sum =', sum(arg, 0))
-
-Here the argument type is "int".  The string passed in the command
-line argument will be converted to this type, and in the help message
-there will be a little hint (looking like "[int]") indicating the
-needed type.  Also note that in this example I don't add documentation
-for the arguments: the docstring information is optional, without them
-there is no help string but everything else still works.
-
-Keyword arguments cause command line arguments like "<name>=<value>"
-to be stolen from the var-arg and form a map.  A type can still be
-provided.  For example, if you have:
-
-    import urllib.parse
-    def get_query_str(url, **item) -> None:
-        "Create URL with parameters"
-        qstr = urllib.parse.urlencode(item)
-        if qstr:
-            url += '?' + qstr
-        print(url)
-
-Then you can run something like
-
-    get_query_str.py http://a/b x=a=c y=/
-
-to get `http://a/b?x=a%3Dc&y=%2F`.
-
-Note that only the arguments left over by the positional parameters are
-stolen this way, so give the values of the positional parameters first:
-running the program above as `get_query_str.py x=a` sets `url` to `x=a`
-and prints it unchanged.  Nor should a pair be named after a parameter
-of the function: the pair competes with that parameter for the same
-name, and which of them the function sees depends on the rest of the
-signature.
-
-Finally, if you're tired of writing initialization code, you have an
-additional option to directly place your module under your
-PYTHONPATH.  Then you can run your program simply like
-
-    calf hello.hello -n Isaac
+the flag.  The `<name>=<value>` pairs of `**kwargs` are leftovers in
+the same way: the `get_query_str` program above prints `x=a`
+unchanged when run as `get_query_str.py x=a`, the first word of the
+run having gone to url before anything could be taken from the
+leftovers.
 
 ## Advanced capability
 
