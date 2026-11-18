@@ -328,6 +328,15 @@ class CalfRunner:
             self._param_parser(pinfo)
         self.create_arg_parser(calf_info, prog)
         specs = calf_info.param_specs = inspect.getfullargspec(func)
+        # A parameter which cannot be given by name has to take a
+        # positional slot when calling the function: the positional-only
+        # ones, and, as a var-arg parameter never takes a keyword, every
+        # parameter in front of it
+        calf_info.positional_params = (
+            list(specs.args) if specs.varargs else
+            [name for name, param
+             in inspect.signature(func).parameters.items()
+             if param.kind is inspect.Parameter.POSITIONAL_ONLY])
         params = specs.args or []
         defaults = list(specs.defaults or ())
         defaults = [NO_DEFAULT] * (len(params) - len(defaults)) + defaults
@@ -367,7 +376,8 @@ class CalfRunner:
             calf_info: The calf info object
             param: The parameter to add
             default: The parameter default value
-            kind: The parameter kind, one of 'pos', 'opt', 'varkw' and 'var'
+            kind: The parameter kind, one of 'pos', 'opt', 'var'
+                and 'varkw'
 
         """
         assert calf_info.param_specs
@@ -385,9 +395,12 @@ class CalfRunner:
         info = calf_info.param_info.get(param)
         for selector in self._selectors:
             if selector.match(param, ptype, kind, info):
-                calf_info.arg_loaders[param] = selector.make_loader(
-                    param, ptype, kind, info, default)
-                calf_info.arg_loaders[param].prepare(calf_info)
+                loader = selector.make_loader(param, ptype, kind, info,
+                                              default)
+                loader.fill_by_position = \
+                    param in calf_info.positional_params
+                calf_info.arg_loaders[param] = loader
+                loader.prepare(calf_info)
                 return
 
     def parse_args(self, calf_info: 'CalfInfo', args: ca.Sequence[str]) \
@@ -461,7 +474,9 @@ class LoaderSelector:
 
         A bool parameter becomes an option only if it defaults to False,
         which makes it a default-off flag.  Otherwise it keeps its own
-        place, taking a "0" or "1" value.
+        place, taking a "0" or "1" value.  Whether the parameter can be
+        given by name is no concern of the loader class: CalfRunner marks
+        those loaders fill_by_position.
 
         Args:
 
@@ -503,6 +518,12 @@ class LoaderSelector:
 class BaseArgLoader:
     """Base class for parameter handling
 
+    A loader gives the value it loads to the target function by name, so
+    that a parameter taken as an option in front of this one does not
+    shift it.  CalfRunner sets fill_by_position for the parameters which
+    cannot be given that way: the positional-only ones, and every one in
+    front of a var-arg parameter.
+
     Args:
 
         param: The parameter name
@@ -517,6 +538,7 @@ class BaseArgLoader:
         self._param = param
         self._ptype, self._default = unwrap_optional(ptype, default)
         self._info = info
+        self.fill_by_position = False
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
         """Populate the parser
@@ -555,6 +577,22 @@ class BaseArgLoader:
         """
         raise NotImplementedError()
 
+    def pass_value(self, value: typing.Any, pos: list[typing.Any],
+                   kwd: dict[str, typing.Any]) -> None:
+        """Pass a parameter value to the target function
+
+        Args:
+
+            value: The value loaded for this parameter
+            pos: Positional argument for calling the target function
+            kwd: Keyword argument for calling the target function
+
+        """
+        if self.fill_by_position:
+            pos.append(value)
+        else:
+            kwd[self._param] = value
+
     def conv(self, val: typing.Any) -> typing.Any:
         """Perform value conversion
 
@@ -581,7 +619,6 @@ class PosArgLoader(BaseArgLoader):
         param: The parameter name
         ptype: The parameter type
         info: The parameter information parsed from docstring
-        kind: The parameter kind, one of 'pos', 'opt', 'var' and 'varkw'
         default: The parameter default, or NO_DEFAULT
 
     """
@@ -596,7 +633,8 @@ class PosArgLoader(BaseArgLoader):
 
     def load(self, namespace: argparse.Namespace,
              pos: list[typing.Any], kwd: dict[str, typing.Any]) -> None:
-        pos.append(self.conv(getattr(namespace, self._param)))
+        self.pass_value(self.conv(getattr(namespace, self._param)),
+                        pos, kwd)
 
 
 def _gettype(ptype: type[typing.Any]) -> type[typing.Any]:
@@ -646,7 +684,8 @@ class OptArgLoader(BaseArgLoader):
 
     def load(self, namespace: argparse.Namespace,
              pos: list[typing.Any], kwd: dict[str, typing.Any]) -> None:
-        kwd[self._param] = self.conv(getattr(namespace, self._param))
+        self.pass_value(self.conv(getattr(namespace, self._param)),
+                        pos, kwd)
 
 
 class VarArgLoader(BaseArgLoader):
@@ -686,6 +725,19 @@ class MapArgLoader(BaseArgLoader):
 
 
 class CompositeArgLoader(BaseArgLoader):
+    """Handle a parameter populated from several command line arguments
+
+    Args:
+
+        param: The parameter name
+        ptype: The parameter type
+        info: The parameter information parsed from docstring
+        default: The parameter default, or NO_DEFAULT
+        ctor: Callable creating the parameter out of the loaded values
+        subloaders: Loaders providing the values for ctor
+
+    """
+
     def __init__(self, param: str, ptype: type,
                  info: typing.Optional[ParamInfo],
                  default: typing.Any,
@@ -706,7 +758,7 @@ class CompositeArgLoader(BaseArgLoader):
         varkw: dict[str, typing.Any] = {}
         for loader in self._subloaders:
             loader.load(namespace, vararg, varkw)
-        pos.append(self._ctor(*vararg, **varkw))
+        self.pass_value(self._ctor(*vararg, **varkw), pos, kwd)
 
 
 VarIdentType = typing.Union[str, re.Pattern[str]]
@@ -777,6 +829,9 @@ class CalfInfo:
     def __init__(self) -> None:
         self.usage = ''
         self.param_specs: typing.Optional[inspect.FullArgSpec] = None
+        # Parameters whose value has to fill a positional slot when
+        # calling the function, in the order of the signature
+        self.positional_params: list[str] = []
         self.param_info: dict[str, ParamInfo] = {}
         # Iterated in insertion order: the order parameters are declared
         self.arg_loaders: dict[str, BaseArgLoader] = {}

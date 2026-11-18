@@ -141,9 +141,13 @@ at the main classes it defines.
   * ArgLoader: Produced by LoaderSelector to keep information about
     specific parameters, and load the parsed command line arguments to
     give parameter values at the end.  There are many subclasses of
-    ArgLoaders, each for handling a different type of parameters.
-    There is also a CompositeArgLoader defined so that you can easily
-    use multiple ArgLoader for one parameter.
+    ArgLoaders, each for handling a different type of parameters.  A
+    loader gives its value to the target function by the parameter name,
+    so a parameter taken as an option does not shift the ones behind it,
+    unless CalfRunner marks it fill_by_position, which it does for the
+    parameters which cannot be given by name.  There is also a
+    CompositeArgLoader defined so that you can easily use multiple
+    ArgLoader for one parameter.
 
   * VarArgBroker: Determine how variable arguments are to be
     distributed among the Namespace produced by the underlying
@@ -198,7 +202,10 @@ converter class then does the following:
 
   * The resulting Namespace object is used to populate the lists of
     function positional and keyword parameters, by calling the
-    `load` method of the ArgLoader objects.
+    `load` method of the ArgLoader objects.  A loader gives its value by
+    name, except the ones CalfRunner has marked fill_by_position: the
+    positional-only parameters, and every parameter in front of a
+    var-arg one, as those never take a keyword.
 
   * The target function with the positional and keyword parameter list
     obtained above.

@@ -388,6 +388,98 @@ def test_composite():
         param_parser=calf.basic_param_parser)(func5, []) == Name('Isaac', 'To')
 
 
+def func13(first: str, second: bool = False,
+           third: str = 'hello') -> typing.Tuple[str, bool, str]:
+    """Test function with a flag between positional parameters
+
+    Args:
+        first: First
+        second: (-s) Second
+        third: Third
+
+    """
+    return first, second, third
+
+
+def test_flag_between_params():
+    # a parameter handled as an option leaves no hole behind: calf gives
+    # the values to the function by name
+    assert calf.call(func13, ['a']) == ('a', False, 'hello')
+    assert calf.call(func13, ['a', 'w']) == ('a', False, 'w')
+    assert calf.call(func13, ['-s', 'a']) == ('a', True, 'hello')
+    assert calf.call(func13, ['-s', 'a', 'w']) == ('a', True, 'w')
+
+
+def func14(a: int, b: str, /,
+           c: float = 1.5) -> typing.Tuple[int, str, float]:
+    """Test function with positional-only parameters
+
+    Args:
+        a: A
+        b: B
+        c: C
+
+    """
+    return a, b, c
+
+
+def test_positional_only():
+    assert calf.call(func14, ['1', 'b']) == (1, 'b', 1.5)
+    assert calf.call(func14, ['1', 'b', '2.5']) == (1, 'b', 2.5)
+
+
+def func15(v: bool = False, /) -> bool:
+    """Test function with a positional-only bool
+
+    Args:
+        v: V
+
+    """
+    return v
+
+
+def test_positional_only_bool(capsys):
+    # the bool rule does not depend on the parameter being nameable: the
+    # flag value fills the positional slot of the call
+    assert calf.call(func15, []) is False
+    assert calf.call(func15, ['--v']) is True
+    with pytest.raises(SystemExit):
+        calf.call(func15, ['1'])
+    assert 'unrecognized' in capsys.readouterr().err
+
+
+def func16(verbose: bool = False,
+           *files: str) -> typing.Tuple[bool, typing.Tuple[str, ...]]:
+    """Test function with a flag before a var-arg parameter
+
+    Args:
+        verbose: (-v) Be verbose
+        files: Files
+
+    """
+    return verbose, files
+
+
+def test_flag_before_varargs():
+    # the parameters in front of a var-arg one fill the positional slots
+    # in order, as a var-arg never takes a keyword
+    assert calf.call(func16, []) == (False, ())
+    assert calf.call(func16, ['-v', 'a', 'b']) == (True, ('a', 'b'))
+    assert calf.call(func16, ['a']) == (False, ('a',))
+
+
+def func17(name: Name, /, extra: str = 'x') -> typing.Tuple[Name, str]:
+    return name, extra
+
+
+def test_composite_positional_only():
+    assert calf.CalfRunner(
+        [NameSelector()],
+        doc_parser=calf.google_doc_parser,
+        param_parser=calf.basic_param_parser)(func17, ['-f', 'A']) \
+        == (Name('A', 'To'), 'x')
+
+
 def test_unimplemented():
     base_loader = calf.BaseArgLoader('p1', str, None, calf.NO_DEFAULT)
     calf_info = calf.CalfInfo()

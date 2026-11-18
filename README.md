@@ -158,6 +158,12 @@ use multiple command line arguments (or do any other interaction with
 the ArgumentParser).  See `composite.py` in the docs directory to see
 how this is done, for the common case.
 
+Calf gives the loaded values to your function by name, so a parameter
+which becomes an option does not shift the parameters behind it.  A
+parameter before a `/` marker in the signature cannot be given by name,
+so its value fills a positional slot, as do all the parameters in front
+of a variable-argument one.
+
 Other parts of the module can also be overridden.  For example, you
 can change the docstring parser and parameter doc parser.  See the
 design document in the docs directory to understand the design and do
