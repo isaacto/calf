@@ -80,7 +80,10 @@ It is also possible to specify a default which provides no value (so
 the program knows that no value is provide).  This is done by either
 using a default value of None, or setting in parameter a type of a
 parameterized Typing.Optional (without setting a default).  In this
-case the normal construction of the target type will not happen.
+case the normal construction of the target type will not happen.  Such
+a parameter without an annotation is an optional string: the function
+gets the string given on the command line, or None when the argument
+is absent.
 
 There is a special case: any boolean function argument becomes a
 default-off flag.  I cannot find a natural way to have a default-on
@@ -130,12 +133,16 @@ You can have your function to accept other types.  Calf normally uses
 one positional argument or option for each function argument, and
 whatever string you specified in the argument will be passed to the
 type you specified (via default argument or annotation) as
-constructor.  In cases that passing the string to the type constructor
-doesn't do the right thing (e.g., `datetime`), you can create your own
-conversion function and add it to calf.CONVERTERS.  This has been done
-for `datetime.date`, `datetime.time` and `datetime.datetime`, and you
-can change how they behave by modifying `calf.CONVERTERS` (see the
-`nextday.py` example in the docs directory).
+constructor.  A parameter without an annotation takes its type from
+its default value; one with no default at all is a string, and one
+defaulting to None is an optional string, so the command line string
+reaches your function unchanged.  In cases that passing the string to
+the type constructor doesn't do the right thing (e.g., `datetime`),
+you can create your own conversion function and add it to
+calf.CONVERTERS.  This has been done for `datetime.date`,
+`datetime.time` and `datetime.datetime`, and you can change how they
+behave by modifying `calf.CONVERTERS` (see the `nextday.py` example
+in the docs directory).
 
 But you can also extend calf by creating a subclass of "selector" which
 selects function arguments based on name and type.  It then specifies

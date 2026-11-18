@@ -187,6 +187,50 @@ def test_pos_default():
     assert calf.call(func3, ['42']) == (42, None, 'foo')
 
 
+def func6(var1=None, var2: str = 'foo') -> typing.Tuple[
+        typing.Optional[str], str]:
+    """Test function with an unannotated None default
+
+    Args:
+        var1: Variable 1
+        var2: Variable 2
+
+    """
+    return var1, var2
+
+
+def test_unannotated_none_default():
+    # an unannotated None default means an optional string, where None
+    # tells the function the argument was not given
+    assert calf.call(func6, []) == (None, 'foo')
+    assert calf.call(func6, ['bar', 'baz']) == ('bar', 'baz')
+    with pytest.raises(SystemExit):
+        calf.call(func6, ['bar', 'baz', 'extra'])
+
+
+def func7(*, var1=None, var2: str = 'foo') -> typing.Tuple[
+        typing.Optional[str], str]:
+    """Test function with an unannotated None default for an option
+
+    Args:
+        var1: (-v) Variable 1
+        var2: Variable 2
+
+    """
+    return var1, var2
+
+
+def test_unannotated_none_default_option(capsys):
+    assert calf.call(func7, []) == (None, 'foo')
+    assert calf.call(func7, ['--var1', 'bar']) == ('bar', 'foo')
+    assert calf.call(func7, ['-v', 'bar', '--var2', 'baz']) == ('bar', 'baz')
+    with pytest.raises(SystemExit):
+        calf.call(func7, ['-h'])
+    captured = capsys.readouterr()
+    assert '-v VAR1, --var1 VAR1' in captured.out
+    assert 'NoneType' not in captured.out
+
+
 def func4(**kwargs: str) -> typing.Dict[str, str]:
     """Test function
 

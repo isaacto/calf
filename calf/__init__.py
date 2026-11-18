@@ -338,7 +338,15 @@ class CalfRunner:
         assert calf_info.param_specs
         ptype = calf_info.param_specs.annotations.get(param)
         if not ptype:
-            ptype = type(default) if default is not NO_DEFAULT else str
+            if default is None:
+                # None is not a usable type: an unannotated parameter
+                # defaulting to None means an optional string, where None
+                # tells the function the argument was not given.  Loaders
+                # unwrap the parameterized Optional to get str
+                ptype = typing.cast(type, typing.Optional[str])
+            else:
+                ptype = (type(default) if default is not NO_DEFAULT
+                         else str)
         info = calf_info.param_info.get(param)
         for selector in self._selectors:
             if selector.match(param, ptype, kind, info):
