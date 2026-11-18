@@ -513,7 +513,13 @@ class CalfRunner:
                 others.remove('--')
         else:
             namespace, others = calf_info.parser.parse_args(args), []
-        calf_info.var_arg_broker.distribute(namespace, others)
+        unrecognized = calf_info.var_arg_broker.distribute(namespace,
+                                                           others)
+        if unrecognized:
+            # report through the parser so the message reads like
+            # argparse's own, for the tokens no parameter claimed
+            calf_info.parser.error(
+                f'unrecognized arguments: {" ".join(unrecognized)}')
         return namespace
 
     def ns2params(self, calf_info: 'CalfInfo',
@@ -885,7 +891,7 @@ class VarArgBroker:
         return bool(var_ident.match(pval))
 
     def distribute(self, namespace: argparse.Namespace,
-                   others: list[str]) -> None:
+                   others: list[str]) -> list[str]:
         """Distribute variable length arguments among namespace records
 
         The blind parser leaves the arguments of the variable-length
@@ -901,18 +907,24 @@ class VarArgBroker:
             others: The other arguments not already in namespace that
               also contains remaining arguments
 
+        Returns:
+
+            The arguments that no registered parameter claims
+
         """
         if not self._registered:
-            return
+            return []
         for _, param in self._registered:
             setattr(namespace, param, [])
+        unrecognized: list[str] = []
         for remain in others:
             for var_ident, param in self._registered:
                 if self._match_arg(var_ident, remain):
                     getattr(namespace, param).append(remain)
                     break
             else:
-                raise ValueError(f'Remaining argument {remain} not recognized')
+                unrecognized.append(remain)
+        return unrecognized
 
 
 class CalfInfo:

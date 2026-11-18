@@ -352,10 +352,12 @@ def func4(**kwargs: str) -> typing.Dict[str, str]:
     return kwargs
 
 
-def test_kwargs_only():
+def test_kwargs_only(capsys):
     assert calf.call(func4, ['bar=42']) == {'bar': '42'}
-    with pytest.raises(ValueError):
+    # a token no parameter claims is a usage error, not a traceback
+    with pytest.raises(SystemExit):
         calf.call(func4, ['bar'])
+    assert 'unrecognized arguments: bar' in capsys.readouterr().err
 
 
 Name = collections.namedtuple('Name', ['firstname', 'lastname'])

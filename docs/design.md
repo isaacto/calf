@@ -213,7 +213,8 @@ converter class then does the following:
     parameter it parses strictly; with one it parses what the blind
     parser knows and leaves the rest.  The VarArgBroker distributes the
     remaining arguments among the Namespace records of the parameters
-    that take them.
+    that take them.  Arguments no parameter claims are reported through
+    the parser, in the same wording the strict path uses for them.
 
   * The resulting Namespace object is used to populate the lists of
     function positional and keyword parameters, by calling the
