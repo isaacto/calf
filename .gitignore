@@ -2,7 +2,10 @@
 __pycache__
 .cache
 .coverage
+.venv
+.vscode
 build
 dist
 requirements-dev.txt
 *.egg-info
+AGENTS.md
