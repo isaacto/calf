@@ -480,6 +480,32 @@ def test_composite_positional_only():
         == (Name('A', 'To'), 'x')
 
 
+def func18(first, *args) -> typing.Tuple[str, typing.Tuple[str, ...]]:
+    """Test function with a required parameter before the var args
+
+    Args:
+        first: First
+        args: Var args
+
+    """
+    return first, args
+
+
+def test_calf_parser(capsys):
+    # the blind parser behind the calf parser knows no var args, so
+    # their arguments come back as the remaining ones, and what it does
+    # not parse it does not ask for either; the calf parser documents
+    # them
+    assert calf.call(func2, ['x', '--', 'y']) == (('x', 'y'), {})
+    with pytest.raises(SystemExit):
+        calf.call(func2, ['-h'])
+    out = capsys.readouterr().out
+    assert '[key=val ...]' in out and '[args ...]' in out
+    with pytest.raises(SystemExit):
+        calf.call(func18, [])
+    assert 'required: first\n' in capsys.readouterr().err
+
+
 def test_unimplemented():
     base_loader = calf.BaseArgLoader('p1', str, None, calf.NO_DEFAULT)
     calf_info = calf.CalfInfo()

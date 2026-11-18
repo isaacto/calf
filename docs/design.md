@@ -153,10 +153,19 @@ at the main classes it defines.
     distributed among the Namespace produced by the underlying
     argparse.ArgumentParser.
 
+  * CalfParser: The one parser the rest of calf sees.  It documents
+    the whole command line, and parses with a blind parser it holds;
+    arguments are added to both, except those of the variable-length
+    parameters (nargs='*'), which the blind parser never learns of, so
+    their arguments come back as the remaining ones for the
+    VarArgBroker.  The blind parser borrows the calf parser's usage and
+    help text.
+
   * CalfInfo: A POD class storing information during the conversion
     process.  This includes the parsed function docstring, param
-    docs, ArgLoader objects, VarArgBroker, the ArgumentParser, and the
-    Namespace resulting from command line parsing.
+    docs, ArgLoader objects, VarArgBroker, the CalfParser which
+    loaders add their arguments to, and the Namespace resulting from
+    command line parsing.
 
   * ParamInfo: Information about a parameter extracted from docstring.
     Includes its description, short name and allowable values.
@@ -180,7 +189,9 @@ converter class then does the following:
   * The ParamInfo's are parsed using a `param_parser` function,
     finding and possibly stripping away information needed by calf.
 
-  * The ArgumentParser is created with `create_arg_parser`.
+  * The parser is created with `create_arg_parser`: a CalfParser,
+    which documents the whole command line and parses with a blind
+    parser of its own, kept empty of the variable-length parameters.
     Subclasses of CalfRunner may override this process, e.g., to use
     its own options.
 
@@ -192,13 +203,17 @@ converter class then does the following:
     positional, optional, etc.
 
   * The ArgLoader objects have the `prepare` method called to add the
-    needed command line argument to the ArgumentParser.  It also
-    populate the VarArgBroker by calling `register_var`.
+    needed command line argument through `CalfParser.add_argument`,
+    which passes it to the blind parser as well, unless it takes a
+    variable number of values (nargs='*'), as a variable-length
+    parameter's arguments are left for the VarArgBroker.  It also
+    populates the VarArgBroker by calling `register_var`.
 
-  * The ArgumentParser is used to parse sys.argv, producing a
-    Namespace object and some unparsed arguments.  The variable
-    argument taken and the unparsed arguments are collected and
-    distributed among the Namespace by the VarArgBroker.
+  * The parser is used to parse sys.argv.  Without any variable-length
+    parameter it parses strictly; with one it parses what the blind
+    parser knows and leaves the rest.  The VarArgBroker distributes the
+    remaining arguments among the Namespace records of the parameters
+    that take them.
 
   * The resulting Namespace object is used to populate the lists of
     function positional and keyword parameters, by calling the

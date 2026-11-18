@@ -262,6 +262,79 @@ def unwrap_optional(ptype: type, default: typing.Any) \
     return ptype, default
 
 
+class _BlindParser(argparse.ArgumentParser):
+    "Parser blind to the variable arguments, printing its holder's text"
+
+    def __init__(self, holder: 'CalfParser',
+                 **kwargs: typing.Any) -> None:
+        super().__init__(**kwargs)
+        self._holder = holder
+
+    def format_usage(self) -> str:
+        return self._holder.format_usage()
+
+    def format_help(self) -> str:
+        return self._holder.format_help()
+
+
+class CalfParser(argparse.ArgumentParser):
+    """Argument parser which parses with a parser knowing no var args
+
+    This is the parser calf creates, the one the loaders add their
+    arguments to, and the one the command line is parsed with: it
+    documents the whole command line itself, while the blind parser it
+    holds does the parsing.  add_argument passes an argument to that
+    parser, so that it is parsed as well as documented, except one
+    declared with nargs='*': such is the argument of a
+    variable-length parameter, whose values the VarArgBroker
+    distributes, and the blind parser must not consume them; it is
+    documented here only, so parse_known_args leaves their tokens over
+    as the remaining arguments.  The blind parser borrows this
+    parser's text, so its help and its errors still describe the whole
+    command line.
+
+    Args:
+
+        kwargs: The arguments of the parser to create
+
+    """
+
+    def __init__(self, **kwargs: typing.Any) -> None:
+        # The blind parser comes first: the parent constructor adds the
+        # help argument through add_argument, which already needs it.
+        # The blind parser does not add a help argument of its own, as
+        # the forwarded one registers it later on.
+        self._blind = _BlindParser(self, **{**kwargs, 'add_help': False})
+        super().__init__(**kwargs)
+
+    def add_argument(self, *args: typing.Any, **kwargs: typing.Any) \
+            -> argparse.Action:
+        """Add an argument, to the blind parser too if it must be parsed
+
+        An argument taking a variable number of values (nargs='*')
+        belongs to a variable-length parameter and is only documented,
+        as its values are distributed by the VarArgBroker.
+        """
+        action = super().add_argument(*args, **kwargs)
+        if kwargs.get('nargs') != '*':
+            self._blind.add_argument(*args, **kwargs)
+        return action
+
+    # Narrow argparse's generic Namespace type argument on purpose:
+    # calf always parses into a plain argparse.Namespace
+    def parse_args(  # type: ignore[override]
+            self, args: typing.Optional[ca.Sequence[str]] = None,
+            namespace: typing.Optional[argparse.Namespace] = None) \
+            -> argparse.Namespace:
+        return self._blind.parse_args(args, namespace)
+
+    def parse_known_args(  # type: ignore[override]
+            self, args: typing.Optional[ca.Sequence[str]] = None,
+            namespace: typing.Optional[argparse.Namespace] = None) \
+            -> tuple[argparse.Namespace, list[str]]:
+        return self._blind.parse_known_args(args, namespace)
+
+
 class CalfRunner:
     """Convert callables to ArgumentParser and use it to provide a CLI
 
@@ -354,7 +427,13 @@ class CalfRunner:
 
     def create_arg_parser(self, calf_info: 'CalfInfo',
                           prog: typing.Optional[str] = None) -> None:
-        """Create the ArgumentParser in calf_info
+        """Create the parser in the calf info structure
+
+        The parser documents the whole command line, and parses it with
+        a blind parser of its own knowing nothing about the
+        variable-length parameters, so that their arguments are left for
+        the VarArgBroker: see CalfParser.  Subclasses of CalfRunner
+        may override this process, e.g., to use their own options.
 
         Args:
 
@@ -362,7 +441,7 @@ class CalfRunner:
             prog: The program name
 
         """
-        calf_info.parser = argparse.ArgumentParser(
+        calf_info.parser = CalfParser(
             prog=prog,
             description=calf_info.usage,
             formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -407,6 +486,11 @@ class CalfRunner:
             -> argparse.Namespace:
         """Parse command line arguments
 
+        The parser documents the arguments of the variable-length
+        parameters but does not parse them: with one registered, the
+        tokens they are made of come back from parse_known_args as the
+        remaining arguments for the VarArgBroker: see CalfParser.
+
         Args:
 
             calf_info: The calf info object
@@ -420,6 +504,13 @@ class CalfRunner:
         assert calf_info.parser
         if calf_info.var_arg_broker.want_var_arg():
             namespace, others = calf_info.parser.parse_known_args(args)
+            # The separator is not a value of its own: it only says that
+            # what follows is not an option, and the broker, which never
+            # looks for options among the remaining arguments, should not
+            # see it as one.  argparse removes it by itself only from the
+            # values it hands over to an argument it knows.
+            if '--' in others:
+                others.remove('--')
         else:
             namespace, others = calf_info.parser.parse_args(args), []
         calf_info.var_arg_broker.distribute(namespace, others)
@@ -797,15 +888,15 @@ class VarArgBroker:
                    others: list[str]) -> None:
         """Distribute variable length arguments among namespace records
 
-        Collect the variable length argument, and look for a
-        registered parameter accepting the argument for each of them.
-        Once found the argument is appended to the parameter record of
-        the namespace.
+        The blind parser leaves the arguments of the variable-length
+        parameters unparsed, so each of them is given to the registered
+        parameter accepting it, and the records of all the registered
+        parameters are created, whether they take an argument or not.
 
         Args:
 
-            namespace: The namespace to collection arguments and
-              assign them to parameters
+            namespace: Where to record the arguments of the parameters
+              which take them
 
             others: The other arguments not already in namespace that
               also contains remaining arguments
@@ -813,9 +904,9 @@ class VarArgBroker:
         """
         if not self._registered:
             return
-        remains = getattr(namespace, self._registered[0][1]) + others
-        getattr(namespace, self._registered[0][1])[:] = []
-        for remain in remains:
+        for _, param in self._registered:
+            setattr(namespace, param, [])
+        for remain in others:
             for var_ident, param in self._registered:
                 if self._match_arg(var_ident, remain):
                     getattr(namespace, param).append(remain)
@@ -836,7 +927,8 @@ class CalfInfo:
         # Iterated in insertion order: the order parameters are declared
         self.arg_loaders: dict[str, BaseArgLoader] = {}
         self.var_arg_broker = VarArgBroker()
-        self.parser: typing.Optional[argparse.ArgumentParser] = None
+        # The one parser of calf: see CalfParser
+        self.parser: typing.Optional[CalfParser] = None
         self.namespace: typing.Optional[argparse.Namespace] = None
 
 
