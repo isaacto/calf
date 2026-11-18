@@ -10,7 +10,8 @@ parameters from command line arguments.
 # "params" and "args" respectively here.
 
 import argparse
-import collections
+import collections.abc as ca
+import dataclasses
 import datetime
 import inspect
 import itertools
@@ -22,7 +23,7 @@ import typing
 __version__ = '0.5'
 
 
-ConverterType = typing.Callable[[str], typing.Any]
+ConverterType = ca.Callable[[str], typing.Any]
 
 
 def _time_convert(s: str) -> datetime.time:
@@ -47,20 +48,19 @@ CONVERTERS: dict[type, ConverterType] = {
 "Add or change a function here if you want to teach calf how to read a type"
 
 
+@dataclasses.dataclass
 class ParamInfo:
     "Parameter information extracted from doc-strings"
-    def __init__(self, desc: str, short: str = '',
-                 choices: typing.Optional[list[str]] = None) -> None:
-        self.desc = desc
-        "The description of the parameter"
-        self.short = short
-        "The short option string, like '-i'"
-        self.choices: typing.Optional[list[str]] = choices
-        "The possible choices"
+    desc: str
+    "The description of the parameter"
+    short: str = ''
+    "The short option string, like '-i'"
+    choices: typing.Optional[list[str]] = None
+    "The possible choices"
 
 
 DocParserRetType = tuple[str, dict[str, ParamInfo]]
-DocParserType = typing.Callable[[str], DocParserRetType]
+DocParserType = ca.Callable[[str], DocParserRetType]
 
 
 def plain_doc_parser(doc: str) -> DocParserRetType:
@@ -130,8 +130,8 @@ def sphinx_doc_parser(doc: str) -> DocParserRetType:
         return main_doc, param_docs
     main_doc = parts[0]
     for group in indented_groups(''.join(parts[1:])):
-        match = re.match(r'[:@]param\s+([^:]+):\s*(.*)$', ' '.join(group))
-        if not match:
+        if not (match := re.match(r'[:@]param\s+([^:]+):\s*(.*)$',
+                                  ' '.join(group))):
             continue
         name = match.group(1).strip('`').lstrip('*')
         param_docs[name] = ParamInfo(match.group(2).strip())
@@ -168,7 +168,7 @@ def numpy_doc_parser(doc: str) -> DocParserRetType:
     return main_doc, param_docs
 
 
-def indented_groups(inp: str) -> typing.Iterator[list[str]]:
+def indented_groups(inp: str) -> ca.Iterator[list[str]]:
     """Split text according to indentation
 
     Args:
@@ -186,10 +186,9 @@ def indented_groups(inp: str) -> typing.Iterator[list[str]]:
     lines = [l.expandtabs() for l in inp.split('\n') if l.strip()]
     if not lines:
         return
-    match = re.search('^ *', lines[0])
-    assert match
-    ilen = len(match.group(0))
-    lines = list(itertools.takewhile(lambda x: x[:ilen] == ' ' * ilen, lines))
+    ilen = len(lines[0]) - len(lines[0].lstrip(' '))
+    lines = list(itertools.takewhile(lambda x: x.startswith(' ' * ilen),
+                                     lines))
     is_start = [0 if l[ilen] == ' ' else 1 for l in lines]
     group_cnt = list(itertools.accumulate(is_start))
     for _, group_iter in itertools.groupby(zip(lines, group_cnt),
@@ -197,7 +196,7 @@ def indented_groups(inp: str) -> typing.Iterator[list[str]]:
         yield list(x for x, _ in group_iter)
 
 
-ParamParserType = typing.Callable[[ParamInfo], None]
+ParamParserType = ca.Callable[[ParamInfo], None]
 
 
 def basic_param_parser(pinfo: ParamInfo) -> None:
@@ -212,18 +211,17 @@ def basic_param_parser(pinfo: ParamInfo) -> None:
         pinfo: The parameter information
 
     """
-    match = re.match(r'^\((-[A-Za-z0-9])\)\s*(.*)', pinfo.desc)
-    if match:
+    if match := re.match(r'^\((-[A-Za-z0-9])\)\s*(.*)', pinfo.desc):
         pinfo.desc = match.group(2)
         pinfo.short = match.group(1)
-    match = re.match(r'^(.*?) *\{([^{}]*)\}([.,;]?)$', pinfo.desc)
-    if match and ',' in match.group(2):
+    if (match := re.match(r'^(.*?) *\{([^{}]*)\}([.,;]?)$', pinfo.desc)) \
+       and ',' in match.group(2):
         pinfo.choices = [x.strip() for x in re.split(r',\s*', match.group(2))]
         pinfo.desc = match.group(1) + match.group(3)
     pinfo.desc = pinfo.desc.strip()
 
 
-FuncType = typing.Callable[..., typing.Any]
+FuncType = ca.Callable[..., typing.Any]
 
 
 NO_DEFAULT = object()
@@ -239,7 +237,7 @@ class CalfRunner:
         param_parser: How to parse the parameter string in the docstring
 
     """
-    def __init__(self, selectors: typing.Iterable['LoaderSelector'],
+    def __init__(self, selectors: ca.Iterable['LoaderSelector'],
                  doc_parser: DocParserType,
                  param_parser: ParamParserType) -> None:
         self._selectors = list(selectors) + [LoaderSelector()]
@@ -247,7 +245,7 @@ class CalfRunner:
         self._param_parser = param_parser
 
     def __call__(self, func: FuncType,
-                 args: typing.Optional[typing.Sequence[str]] = None,
+                 args: typing.Optional[ca.Sequence[str]] = None,
                  prog: typing.Optional[str] = None) \
             -> typing.Any:
         """Convert func to a parser, collect arguments and call func
@@ -349,7 +347,7 @@ class CalfRunner:
                 calf_info.arg_loaders[param].prepare(calf_info)
                 return
 
-    def parse_args(self, calf_info: 'CalfInfo', args: typing.Sequence[str]) \
+    def parse_args(self, calf_info: 'CalfInfo', args: ca.Sequence[str]) \
             -> argparse.Namespace:
         """Parse command line arguments
 
@@ -415,7 +413,7 @@ class LoaderSelector:
     def select_loader_cls(self, param: str, ptype: type, kind: str,
                           info: typing.Optional[ParamInfo],
                           default: typing.Any) \
-            -> typing.Type['BaseArgLoader']:
+            -> type['BaseArgLoader']:
         """Select the loader class to use
 
         Args:
@@ -469,11 +467,9 @@ class BaseArgLoader:
                  default: typing.Any) -> None:
         self._param = param
         self._ptype = ptype
-        if type(self._ptype) == type(typing.Optional[int]):  # noqa, type-check
-            pargs = typing.cast(typing.Optional[tuple[typing.Any, ...]],
-                                getattr(self._ptype, '__args__'))
-            if pargs and len(pargs) == 2 \
-               and pargs[1] == type(None):  # noqa, type-check
+        if typing.get_origin(self._ptype) is typing.Union:
+            pargs = typing.get_args(self._ptype)
+            if len(pargs) == 2 and pargs[1] is type(None):
                 self._ptype = pargs[0]
                 if default is NO_DEFAULT:
                     default = None
@@ -500,8 +496,8 @@ class BaseArgLoader:
             if self._info.choices:
                 extra['choices'] = self._info.choices
         if self._ptype is not str:
-            extra['help'] = '%s [%s]' % (extra.get('help', ''),
-                                         _gettype(self._ptype))
+            extra['help'] \
+                = f'{extra.get("help", "")} [{_gettype(self._ptype)}]'
         return extra
 
     def load(self, namespace: argparse.Namespace,
@@ -530,8 +526,8 @@ class BaseArgLoader:
             return val if val is None or isinstance(val, self._ptype) else \
                 CONVERTERS.get(ptype, typing.cast(ConverterType, ptype))(val)
         except ValueError:
-            print('Error: Value "%s" cannot be converted to type %s'
-                  % (val, self._ptype.__name__), file=sys.stderr)
+            print(f'Error: Value "{val}" cannot be converted to type'
+                  f' {self._ptype.__name__}', file=sys.stderr)
             sys.exit(1)
 
 
@@ -561,21 +557,21 @@ class PosArgLoader(BaseArgLoader):
         pos.append(self.conv(getattr(namespace, self._param)))
 
 
-def _gettype(ptype: typing.Type[typing.Any]) -> typing.Type[typing.Any]:
+def _gettype(ptype: type[typing.Any]) -> type[typing.Any]:
     if type(ptype).__name__ != 'UnionType':
         return ptype
     return getinnertype(ptype, ptype.__args__)  # pragma: no cover
 
 
 def getinnertype(
-        ptype: typing.Type[typing.Any], ptypes: list[typing.Type[typing.Any]]
-) -> typing.Type[typing.Any]:
-    found: list[typing.Type[typing.Any]] = []
+        ptype: type[typing.Any], ptypes: list[type[typing.Any]]
+) -> type[typing.Any]:
+    found: list[type[typing.Any]] = []
     for parg in ptypes:
         if parg is not type(None):
             found.append(parg)
     if len(found) != 1:
-        raise RuntimeError('calf: Type %s not supported', ptype)
+        raise RuntimeError(f'calf: Type {ptype} not supported')
     return found[0]
 
 
@@ -665,7 +661,7 @@ class CompositeArgLoader(BaseArgLoader):
         pos.append(self._ctor(*vararg, **varkw))
 
 
-VarIdentType = typing.Union[str, typing.Pattern[str]]
+VarIdentType = typing.Union[str, re.Pattern[str]]
 BrokerTupleType = tuple[VarIdentType, str]
 
 
@@ -725,8 +721,7 @@ class VarArgBroker:
                     getattr(namespace, param).append(remain)
                     break
             else:
-                raise ValueError('Remaining argument %s not recognized'
-                                 % (remain,))
+                raise ValueError(f'Remaining argument {remain} not recognized')
 
 
 class CalfInfo:
@@ -735,14 +730,15 @@ class CalfInfo:
         self.usage = ''
         self.param_specs: typing.Optional[inspect.FullArgSpec] = None
         self.param_info: dict[str, ParamInfo] = {}
-        self.arg_loaders: dict[str, BaseArgLoader] = collections.OrderedDict()
+        # Iterated in insertion order: the order parameters are declared
+        self.arg_loaders: dict[str, BaseArgLoader] = {}
         self.var_arg_broker = VarArgBroker()
         self.parser: typing.Optional[argparse.ArgumentParser] = None
         self.namespace: typing.Optional[argparse.Namespace] = None
 
 
-def call(func: typing.Callable[..., typing.Any],
-         args: typing.Optional[typing.Sequence[str]] = None,
+def call(func: ca.Callable[..., typing.Any],
+         args: typing.Optional[ca.Sequence[str]] = None,
          prog: typing.Optional[str] = None,
          doc_parser: DocParserType = google_doc_parser,
          param_parser: ParamParserType = basic_param_parser) -> typing.Any:
