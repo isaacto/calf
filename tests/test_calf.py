@@ -508,6 +508,40 @@ def test_calf_parser(capsys):
     assert 'required: first\n' in capsys.readouterr().err
 
 
+def func19(count: int, *nums: int, **opts: int) -> typing.Tuple[
+        int, typing.Tuple[int, ...], typing.Dict[str, int]]:
+    """Test function with typed variable-length parameters
+
+    Args:
+        count: How many
+        nums: Var args
+        opts: Keyword args
+
+    """
+    return count, nums, opts
+
+
+def func20(*nums: int) -> int:
+    "Sum of numbers"
+    return sum(nums)
+
+
+def test_type_hint(capsys):
+    # a parameter of a type other than str says its type's name in the
+    # help, the variable-length ones no less than the others, and even
+    # without docstring documentation
+    with pytest.raises(SystemExit):
+        calf.call(func19, ['-h'])
+    out = capsys.readouterr().out
+    assert 'How many [int]' in out
+    assert 'Var args [int]' in out and 'Keyword args [int]' in out
+    assert '<class' not in out
+    with pytest.raises(SystemExit):
+        calf.call(func20, ['-h'])
+    out = capsys.readouterr().out
+    assert 'nums' in out and '[int]' in out
+
+
 def test_unimplemented():
     base_loader = calf.BaseArgLoader('p1', str, None, calf.NO_DEFAULT)
     calf_info = calf.CalfInfo()

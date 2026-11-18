@@ -657,8 +657,8 @@ class BaseArgLoader:
             if self._info.choices:
                 extra['choices'] = self._info.choices
         if self._ptype is not str:
-            extra['help'] \
-                = f'{extra.get("help", "")} [{_gettype(self._ptype)}]'
+            extra['help'] = f'{extra.get("help", "")} ' \
+                            f'[{_gettype(self._ptype).__name__}]'
         return extra
 
     def load(self, namespace: argparse.Namespace,
@@ -789,9 +789,8 @@ class VarArgLoader(BaseArgLoader):
     "Define how to handle a basic remaining option"
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
-        extra: dict[str, typing.Any] = {'nargs': '*'}
-        if self._info:
-            extra['help'] = self._info.desc
+        extra: dict[str, typing.Any] = {
+            'nargs': '*', **self.basic_arg_extra()}
         calf_info.var_arg_broker.register_var('', self._param)
         assert calf_info.parser
         calf_info.parser.add_argument(self._param, **extra)
@@ -806,9 +805,8 @@ class MapArgLoader(BaseArgLoader):
     "Define how to handle a map-like remaining option"
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
-        extra: dict[str, typing.Any] = {'nargs': '*', 'metavar': 'key=val'}
-        if self._info:
-            extra['help'] = self._info.desc
+        extra: dict[str, typing.Any] = {
+            'nargs': '*', 'metavar': 'key=val', **self.basic_arg_extra()}
         calf_info.var_arg_broker.register_var(
             re.compile(r'^[^=].*='), self._param)
         assert calf_info.parser
