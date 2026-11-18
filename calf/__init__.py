@@ -40,7 +40,16 @@ def _datetime_convert(s: str) -> datetime.datetime:
         return datetime.datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
 
 
+def _bool_convert(s: str) -> bool:
+    if s == '0':
+        return False
+    if s == '1':
+        return True
+    raise ValueError(s)
+
+
 CONVERTERS: dict[type, ConverterType] = {
+    bool: _bool_convert,
     datetime.date: lambda s: datetime.datetime.strptime(s, '%Y-%m-%d').date(),
     datetime.time: _time_convert,
     datetime.datetime: _datetime_convert,
@@ -225,6 +234,32 @@ FuncType = ca.Callable[..., typing.Any]
 
 
 NO_DEFAULT = object()
+
+
+def unwrap_optional(ptype: type, default: typing.Any) \
+        -> tuple[type, typing.Any]:
+    """Look through a parameterized Optional parameter type
+
+    A parameterized Optional without a default provides no value, which
+    is the same as defaulting to None, so the two are made the same here.
+
+    Args:
+
+        ptype: The parameter type
+        default: The parameter default, or NO_DEFAULT
+
+    Returns:
+
+        The type the Optional wraps, or ptype itself if it is not one,
+        and the default, which becomes None for an Optional parameter
+        without one
+
+    """
+    if typing.get_origin(ptype) is typing.Union:
+        pargs = typing.get_args(ptype)
+        if len(pargs) == 2 and pargs[1] is type(None):
+            return pargs[0], None if default is NO_DEFAULT else default
+    return ptype, default
 
 
 class CalfRunner:
@@ -424,6 +459,10 @@ class LoaderSelector:
             -> type['BaseArgLoader']:
         """Select the loader class to use
 
+        A bool parameter becomes an option only if it defaults to False,
+        which makes it a default-off flag.  Otherwise it keeps its own
+        place, taking a "0" or "1" value.
+
         Args:
 
             param: Name of the parameter
@@ -433,7 +472,9 @@ class LoaderSelector:
             default: The parameter default value
 
         """
-        if kind == 'opt' or (kind == 'pos' and ptype == bool):
+        ptype, default = unwrap_optional(ptype, default)
+        if kind == 'opt' or (kind == 'pos' and ptype is bool
+                             and default is False):
             return OptArgLoader
         if kind == 'var':
             return VarArgLoader
@@ -474,15 +515,8 @@ class BaseArgLoader:
                  info: typing.Optional[ParamInfo],
                  default: typing.Any) -> None:
         self._param = param
-        self._ptype = ptype
-        if typing.get_origin(self._ptype) is typing.Union:
-            pargs = typing.get_args(self._ptype)
-            if len(pargs) == 2 and pargs[1] is type(None):
-                self._ptype = pargs[0]
-                if default is NO_DEFAULT:
-                    default = None
+        self._ptype, self._default = unwrap_optional(ptype, default)
         self._info = info
-        self._default = default
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
         """Populate the parser
@@ -584,14 +618,20 @@ def getinnertype(
 
 
 class OptArgLoader(BaseArgLoader):
-    "Define how to handle an option"
+    """Define how to handle an option
+
+    A bool option defaulting to False becomes a flag: it takes no value
+    and stores True when specified.  Any other bool option takes a "0" or
+    "1" value.
+
+    """
 
     def prepare(self, calf_info: 'CalfInfo') -> None:
         names = ['--' + self._param]
         if self._info and self._info.short:
             names.insert(0, self._info.short)
         extra = self.basic_arg_extra()
-        if self._ptype == bool:
+        if self._ptype is bool and self._default is False:
             extra = {'default': False, 'action': 'store_true'}
             if self._info:
                 extra['help'] = self._info.desc

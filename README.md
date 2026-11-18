@@ -85,9 +85,16 @@ a parameter without an annotation is an optional string: the function
 gets the string given on the command line, or None when the argument
 is absent.
 
-There is a special case: any boolean function argument becomes a
-default-off flag.  I cannot find a natural way to have a default-on
-flag, so it is not provided.  (Let me know if you think otherwise!)
+There is a special case for booleans.  A boolean parameter defaulting to
+False becomes a default-off flag: it takes no command line value, and is
+True when specified.  Any other boolean parameter is not treated
+specially: it keeps its place as a positional argument, or as an option
+for a keyword-only parameter, and takes a command line value of "0"
+(false) or "1" (true).  So one defaulting to None is an optional boolean
+which stays None when the argument is absent, and one defaulting to True
+can still be given "0".  I cannot find a natural way to have a
+default-on flag, so it is not provided.  (Let me know if you think
+otherwise!)
 
 Variable arguments and keyword arguments can also be used.  Variable
 arguments will become a list of the specified type:
@@ -139,10 +146,10 @@ defaulting to None is an optional string, so the command line string
 reaches your function unchanged.  In cases that passing the string to
 the type constructor doesn't do the right thing (e.g., `datetime`),
 you can create your own conversion function and add it to
-calf.CONVERTERS.  This has been done for `datetime.date`,
-`datetime.time` and `datetime.datetime`, and you can change how they
-behave by modifying `calf.CONVERTERS` (see the `nextday.py` example
-in the docs directory).
+calf.CONVERTERS.  This has been done for `bool` (reading "0" or "1"),
+`datetime.date`, `datetime.time` and `datetime.datetime`, and you can
+change how they behave by modifying `calf.CONVERTERS` (see the
+`nextday.py` example in the docs directory).
 
 But you can also extend calf by creating a subclass of "selector" which
 selects function arguments based on name and type.  It then specifies

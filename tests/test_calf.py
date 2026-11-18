@@ -64,7 +64,7 @@ def func1(var1: int, var2: bool, *, var3: str, var4: str='bar') \
 
     Args:
         var1: Variable 1
-        var2: (-f) Variable 2
+        var2: Variable 2
         var3: (-x) Variable 3
         var4: (-v) Variable 4 {foo, bar, baz}
 
@@ -77,7 +77,7 @@ def func1s(var1: int, var2: bool, *, var3: str, var4: str='bar') \
     """Test function
 
     :param var1: Variable 1
-    :param var2: (-f) Variable 2
+    :param var2: Variable 2
     :param var3: (-x) Variable 3
     :param var4: (-v) Variable 4 {foo, bar, baz}
     :other: other
@@ -95,7 +95,7 @@ def func1n(var1: int, var2: bool, *, var3: str, var4: str='bar') \
     var1
        Variable 1
     var2 :
-       (-f) Variable 2
+       Variable 2
     var3:
        (-x) Variable 3
     var4 : str
@@ -119,23 +119,24 @@ def test_help(capsys):
     with pytest.raises(SystemExit):
         calf.call(func1, ['-h'])
     captured = capsys.readouterr()
-    assert ' -f, ' in captured.out
+    assert '-x VAR3, --var3' in captured.out
     with pytest.raises(SystemExit):
         calf.call(func1s, ['-h'], doc_parser=calf.sphinx_doc_parser)
     captured = capsys.readouterr()
-    assert ' -f, ' in captured.out
+    assert '-x VAR3, --var3' in captured.out
     with pytest.raises(SystemExit):
         calf.call(func1n, ['-h'], doc_parser=calf.numpy_doc_parser)
     captured = capsys.readouterr()
-    assert ' -f, ' in captured.out
+    assert '-x VAR3, --var3' in captured.out
 
 
 def test_simple(capsys):
-    assert calf.call(func1, ['12', '--var3', 'x']) == (12, False, 'x', 'bar')
     assert calf.call(
-        func1, ['12', '-f', '-v', 'foo', '-x', '5']) == (12, True, '5', 'foo')
+        func1, ['12', '0', '--var3', 'x']) == (12, False, 'x', 'bar')
+    assert calf.call(
+        func1, ['12', '1', '-v', 'foo', '-x', '5']) == (12, True, '5', 'foo')
     with pytest.raises(SystemExit):
-        calf.call(func1, ['x', '--var3', 'x'])
+        calf.call(func1, ['x', '0', '--var3', 'x'])
     captured = capsys.readouterr()
     assert 'cannot be converted' in captured.err
     assert calf.call(func1d, ['2020-03-15', '22:30', '2020-03-15T22:30']) \
@@ -147,6 +148,116 @@ def test_simple(capsys):
         == (datetime.date(2020, 3, 15),
             datetime.time(22, 30, 15),
             datetime.datetime(2020, 3, 15, 22, 30, 15))
+
+
+def func8(name: str = 'n', verbose: bool = False) \
+        -> typing.Tuple[str, bool]:
+    """Test function with a flag
+
+    Args:
+        name: (-n) Name
+        verbose: (-v) Be verbose
+
+    """
+    return name, verbose
+
+
+def test_bool_flag(capsys):
+    # a bool defaulting to False is a default-off flag: it takes no value
+    assert calf.call(func8, []) == ('n', False)
+    assert calf.call(func8, ['--verbose']) == ('n', True)
+    assert calf.call(func8, ['bob', '-v']) == ('bob', True)
+    assert calf.call(func8, ['-v', 'bob']) == ('bob', True)
+    with pytest.raises(SystemExit):
+        calf.call(func8, ['-h'])
+    assert '-v, --verbose' in capsys.readouterr().out
+
+
+def func9(flag: bool, name: str = 'n', *, other: bool = False) \
+        -> typing.Tuple[bool, str, bool]:
+    """Test function with bool values
+
+    Args:
+        flag: Flag, 0 or 1
+        name: Name
+        other: (-o) Other
+
+    """
+    return flag, name, other
+
+
+def test_bool_value(capsys):
+    # a bool without a default takes a "0" or "1" value where it stands;
+    # other defaults to False, so it is a flag instead
+    assert calf.call(func9, ['1']) == (True, 'n', False)
+    assert calf.call(func9, ['0', 'bob', '--other']) \
+        == (False, 'bob', True)
+    with pytest.raises(SystemExit):
+        calf.call(func9, ['2'])
+    assert 'cannot be converted' in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        calf.call(func9, ['yes'])
+    assert 'cannot be converted' in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        calf.call(func9, [])
+    assert 'required' in capsys.readouterr().err
+
+
+def func10(pos: typing.Optional[bool] = None, *, other: bool = None) \
+        -> typing.Tuple[typing.Optional[bool], typing.Optional[bool]]:
+    """Test function with bools defaulting to no value
+
+    Args:
+        pos: Positional flag, 0 or 1
+        other: (-o) Optional flag, 0 or 1
+
+    """
+    return pos, other
+
+
+def test_bool_no_value_default(capsys):
+    # a bool defaulting to None, spelled with None or with a
+    # parameterized Optional, is no flag either: it takes a value, and
+    # None tells the function the argument was not given
+    assert calf.call(func10, []) == (None, None)
+    assert calf.call(func10, ['1']) == (True, None)
+    assert calf.call(func10, ['0', '--other', '1']) == (False, True)
+    with pytest.raises(SystemExit):
+        calf.call(func10, ['--other', 'yes'])
+    assert 'cannot be converted' in capsys.readouterr().err
+
+
+def func11(flag: bool = True) -> bool:
+    """Test function with a default-on bool
+
+    Args:
+        flag: Flag, 0 or 1
+
+    """
+    return flag
+
+
+def test_bool_true_default():
+    # a bool defaulting to True takes a value too, so it can say False
+    assert calf.call(func11, []) is True
+    assert calf.call(func11, ['0']) is False
+
+
+def func12(*flags: bool, **kw: bool) \
+        -> typing.Tuple[typing.Tuple[bool, ...], typing.Dict[str, bool]]:
+    """Test function with bool varargs
+
+    Args:
+        flags: Flags
+        kw: Keyword flags
+
+    """
+    return flags, kw
+
+
+def test_bool_varargs():
+    assert calf.call(func12, ['1', '0', 'a=1', 'b=0']) \
+        == ((True, False), {'a': True, 'b': False})
 
 
 def func2(*args, **kwargs: str) -> typing.Tuple[  # type: ignore
