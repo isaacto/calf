@@ -67,7 +67,7 @@ Then the program is run like one of the following:
     hello.py -n Cathy
 
 Now `name` is an option: a keyword-only function argument always maps
-to a function.  In this version we are explicit about the type of the
+to an option.  In this version we are explicit about the type of the
 argument.  Note also that the leading `-n` in the docstring describing
 the argument, enclosed in parentheses, becomes the short option name.
 
