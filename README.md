@@ -96,6 +96,33 @@ can still be given "0".  I cannot find a natural way to have a
 default-on flag, so it is not provided.  (Let me know if you think
 otherwise!)
 
+A positional argument with a default value is settled by the first
+contiguous run of command line arguments which are not options: filled
+from the run if it is long enough, and left at its default if it is
+not, whatever comes later.  For instance:
+
+    def func(first: str, second: bool = False,
+             third: str = 'hello') -> None:
+        """Do something
+
+        Args:
+
+            first: First
+            second: (-s) Second
+            third: Third
+
+        """
+
+Running `func.py -s d d2` or `func.py d d2 -s` sets first to 'd',
+second to True and third to 'd2', but in `func.py d -s d2` the only
+word before the flag is 'd': it closes first and settles third at its
+default, and the 'd2' behind the flag has nowhere to go, so the
+program stops with "unrecognized arguments: d2".  This is how argparse
+matches positional arguments, and as calf is a frontend to argparse it
+leaves it that way.  A positional argument whose value may have to
+follow an option is better made keyword-only: it becomes an option
+itself, which can be given anywhere, e.g. `func.py d -s --third d2`.
+
 Variable arguments and keyword arguments can also be used.  Variable
 arguments will become a list of the specified type:
 
