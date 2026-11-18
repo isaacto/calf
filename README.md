@@ -73,8 +73,8 @@ the argument, enclosed in parentheses, becomes the short option name.
 
 It is usually a good idea to allow options not to be specified, by
 providing a default value.  Positional arguments can also be provided
-a default value, but it doesn't mix well with variable arguments
-described below.
+a default value: the paragraph below on how such an argument settles
+also tells you what it does beside variable arguments.
 
 It is also possible to specify a default which provides no value (so
 the program knows that no value is provide).  This is done by either
@@ -96,32 +96,60 @@ can still be given "0".  I cannot find a natural way to have a
 default-on flag, so it is not provided.  (Let me know if you think
 otherwise!)
 
-A positional argument with a default value is settled by the first
-contiguous run of command line arguments which are not options: filled
-from the run if it is long enough, and left at its default if it is
-not, whatever comes later.  For instance:
+Positional arguments are filled in order from the contiguous runs of
+command line arguments which are not options.  A parameter takes a
+word from a run as long as the run has one; when the run is used up,
+the parameters still without a value are settled there, at their
+defaults, unless a later parameter which has no default is itself
+still short of a word, in which case it and the parameters after it
+wait for a later run.  For instance:
 
-    def func(first: str, second: bool = False,
-             third: str = 'hello') -> None:
+    def func(foo: str, bar: bool = False,
+             baz: str = 'hello') -> None:
         """Do something
 
         Args:
 
-            first: First
-            second: (-s) Second
-            third: Third
+            foo: Foo
+            bar: (-s) Bar
+            baz: Baz
 
         """
 
-Running `func.py -s d d2` or `func.py d d2 -s` sets first to 'd',
-second to True and third to 'd2', but in `func.py d -s d2` the only
-word before the flag is 'd': it closes first and settles third at its
-default, and the 'd2' behind the flag has nowhere to go, so the
-program stops with "unrecognized arguments: d2".  This is how argparse
-matches positional arguments, and as calf is a frontend to argparse it
-leaves it that way.  A positional argument whose value may have to
-follow an option is better made keyword-only: it becomes an option
-itself, which can be given anywhere, e.g. `func.py d -s --third d2`.
+Running `func.py -s d d2` or `func.py d d2 -s` sets foo to 'd', bar to
+True and baz to 'd2', but in `func.py d -s d2` the run before the flag
+is the single word 'd': it fills the only parameter which needs a
+word, so baz is settled there at its default.  The 'd2' behind the
+flag has nowhere to go, and the program stops with "unrecognized
+arguments: d2".  Give the function a second parameter which has no
+default,
+
+    def func(foo: str, qux: str, bar: bool = False,
+             baz: str = 'hello') -> None:
+
+and the run before the flag in `func.py 2 -s 3 d` is not enough for
+foo and qux together: it fills foo alone, and qux and baz wait for the
+next run, which is '3 d', so qux gets '3' and baz gets 'd'.  This is
+how argparse matches positional arguments, and as calf is a frontend to
+argparse it leaves it that way.  A positional argument whose value may
+have to follow an option is better made keyword-only, which turns it
+into an option that can be given anywhere: with
+`def func(foo: str, bar: bool = False, *, baz: str = 'hello')`,
+`func.py d -s --baz d2` sets foo to 'd' and baz to 'd2'.
+
+A parameter which takes a variable number of arguments, `*args` or
+`**kwargs` (both below), gets what the settled positional arguments
+leave.  With `def func(foo='a', *args)`, `func.py x y` gives foo 'x'
+and args ('y',), and `func.py` alone leaves foo at its default with
+nothing for args: the first word of a run goes to foo before args sees
+any, so nothing reaches args while foo stays at its default.  To have
+both, foo has to come after `*args` in the signature, which makes it
+keyword-only.  Whether a defaulted parameter settles early or waits
+decides what else reaches args: add `*args` to the second example
+above, and `func.py 1 -s 2 3` leaves args empty, the run '2 3' being
+used up by qux and baz, while `func.py 1 2 -s 3 4` gives args '3' and
+'4', baz having been settled at its default by the longer run before
+the flag.
 
 Variable arguments and keyword arguments can also be used.  Variable
 arguments will become a list of the specified type:
